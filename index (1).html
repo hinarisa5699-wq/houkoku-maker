@@ -1,0 +1,2507 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>報告書メーカー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --ground:#F2F5F4;
+  --surface:#FFFFFF;
+  --surface-2:#E9EEEC;
+  --ink:#141C1A;
+  --ink-2:#4A5B57;
+  --ink-3:#7C8C88;
+  --line:#D2DBD8;
+  --line-strong:#9FAFAB;
+  --accent:#0E6E62;
+  --accent-ink:#FFFFFF;
+  --accent-wash:#DCEBE8;
+  --amber:#8A5A0B;
+  --amber-wash:#F6ECD8;
+  --rose:#9C3535;
+  --rose-wash:#F7E3E3;
+  --shadow:0 1px 2px rgba(15,40,36,.06),0 8px 24px rgba(15,40,36,.06);
+  --r:10px;
+  --jp:"Noto Sans JP",system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1413; --surface:#171F1D; --surface-2:#1F2A28;
+    --ink:#E7EEEB; --ink-2:#AFC0BB; --ink-3:#7F918D;
+    --line:#2C3936; --line-strong:#485A56;
+    --accent:#4CBBAA; --accent-ink:#06201C; --accent-wash:#13322D;
+    --amber:#DFA94C; --amber-wash:#332714;
+    --rose:#E08585; --rose-wash:#341C1C;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1413; --surface:#171F1D; --surface-2:#1F2A28;
+  --ink:#E7EEEB; --ink-2:#AFC0BB; --ink-3:#7F918D;
+  --line:#2C3936; --line-strong:#485A56;
+  --accent:#4CBBAA; --accent-ink:#06201C; --accent-wash:#13322D;
+  --amber:#DFA94C; --amber-wash:#332714;
+  --rose:#E08585; --rose-wash:#341C1C;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--jp);font-size:14px;line-height:1.7;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:700;text-wrap:balance}
+
+.app{max-width:1120px;margin:0 auto;padding:0 16px 96px}
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ground) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -16px 20px;padding:10px 16px}
+.topbar-in{max-width:1088px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-size:16px;letter-spacing:.01em}
+.brand span{font-size:11px;color:var(--ink-3);letter-spacing:.12em}
+.tabs{display:flex;gap:2px;background:var(--surface-2);border-radius:99px;padding:3px;margin-right:auto}
+.tab{border:0;background:transparent;border-radius:99px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ymbox{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:4px 6px 4px 12px}
+.ymbox label{font-size:11px;color:var(--ink-3);letter-spacing:.08em}
+.ymbox input{border:0;background:transparent;font-family:var(--mono);font-size:14px;width:120px;padding:2px 4px}
+.ymbox input:focus{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:99px;padding:7px 15px;cursor:pointer;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--surface-2)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.sm{padding:4px 11px;font-size:12px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+select.plain{border:1px solid var(--line-strong);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:18px}
+.card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font-size:14px;letter-spacing:.02em}
+.card-h .sp{margin-left:auto}
+.step{font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;width:20px;height:20px;display:grid;place-items:center;flex:none}
+.card-b{padding:18px}
+.muted{color:var(--ink-3)}
+.hint{font-size:12px;color:var(--ink-3);line-height:1.6}
+
+.drop{border:1.5px dashed var(--line-strong);border-radius:var(--r);padding:28px 20px;text-align:center;background:var(--surface-2);transition:border-color .15s,background .15s;cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-wash)}
+.drop p{margin:0 0 4px}
+.drop .big{font-weight:700}
+.filelist{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:3px 11px}
+.chip.ok{background:var(--accent-wash);border-color:transparent;color:var(--accent)}
+.chip.bad{background:var(--rose-wash);border-color:transparent;color:var(--rose)}
+.chipx{border:0;background:transparent;color:inherit;opacity:.5;cursor:pointer;font-size:15px;line-height:1;padding:0 0 0 4px;margin-left:2px}
+.chipx:hover{opacity:1}
+.chipx:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.chips .staffpick{padding:3px 11px;font-size:12px;border:1px solid var(--line);background:var(--surface)}
+.chips .staffpick.on{background:var(--accent-wash);border-color:transparent;color:var(--accent);font-weight:700}
+.chips .staffpick .cnt{font-family:var(--mono);opacity:.55;margin-left:4px}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;letter-spacing:.1em;color:var(--ink-3)}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+
+.rosterwrap{overflow-x:auto}
+table.roster{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+table.roster th{text-align:left;font-size:11px;letter-spacing:.1em;color:var(--ink-3);font-weight:500;padding:0 10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.roster td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.roster tr:last-child td{border-bottom:0}
+table.roster tbody tr{cursor:pointer}
+table.roster tbody tr:hover{background:var(--surface-2)}
+table.roster tr.sel{background:var(--accent-wash)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+table.roster th.pk,table.roster td.pk{width:34px;padding-left:6px;padding-right:0}
+table.roster input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.flag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;white-space:nowrap}
+.flag.warn{background:var(--amber-wash);color:var(--amber)}
+.flag.err{background:var(--rose-wash);color:var(--rose)}
+.flag.edit{background:var(--accent-wash);color:var(--accent)}
+.flag.done{background:var(--accent);color:var(--accent-ink)}
+.cmgroup td{background:var(--surface-2);font-size:11px;letter-spacing:.1em;color:var(--ink-3);padding:7px 10px!important;cursor:default}
+.cmgroup:hover td{background:var(--surface-2)}
+
+.editor{display:grid;grid-template-columns:auto 1fr;gap:22px}
+@media(max-width:820px){.editor{grid-template-columns:1fr}}
+.calwrap{min-width:0}
+table.cal{border-collapse:collapse;width:100%;max-width:360px}
+table.cal th{font-size:11px;color:var(--ink-3);font-weight:500;padding-bottom:6px;width:14.28%}
+table.cal td{border:1px solid var(--line);padding:0;height:46px;width:14.28%}
+.daybtn{width:100%;height:46px;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:3px 0 0;line-height:1.15}
+.daybtn .d{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.daybtn .o{font-size:17px;color:transparent;font-weight:500}
+.daybtn.on{background:var(--accent-wash)}
+.daybtn.on .d,.daybtn.on .o{color:var(--accent)}
+.daybtn:hover:not(.empty){background:var(--surface-2)}
+.daybtn.on:hover{background:var(--accent-wash);filter:brightness(.97)}
+.daybtn.empty{cursor:default;background:repeating-linear-gradient(135deg,transparent,transparent 5px,var(--surface-2) 5px,var(--surface-2) 6px)}
+.daybtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.calfoot{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--ink-3)}
+.count{font-family:var(--mono);font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+
+.narrbox{display:flex;flex-direction:column;gap:8px;min-width:0}
+.narrbox textarea{min-height:210px;resize:vertical;line-height:1.9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
+.narrbox textarea[readonly]{background:var(--surface-2);color:var(--ink-2)}
+.narrbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.narrbar .sp{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.reclog{margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);max-height:190px;overflow:auto;font-size:12px}
+.reclog table{width:100%;border-collapse:collapse}
+.reclog td{padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.reclog td:first-child{font-family:var(--mono);white-space:nowrap;color:var(--ink-3)}
+.reclog td:nth-child(2){white-space:nowrap;color:var(--ink-2)}
+.reclog tr:last-child td{border-bottom:0}
+details.diag summary{cursor:pointer;font-size:12px;color:var(--ink-3);padding:6px 0}
+
+table.dayedit{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dayedit th{font-size:11px;letter-spacing:.06em;color:var(--ink-3);font-weight:500;text-align:left;padding:0 6px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.dayedit td{padding:2px 4px;border-bottom:1px solid var(--line)}
+table.dayedit td:first-child{font-family:var(--mono);color:var(--ink-3);white-space:nowrap;padding-left:6px}
+table.dayedit input{width:100%;border:1px solid transparent;border-bottom-color:var(--line);background:transparent;border-radius:6px;padding:5px 6px}
+table.dayedit input:hover{border-color:var(--line)}
+table.dayedit input:focus{outline:2px solid var(--accent);outline-offset:-1px;background:var(--surface)}
+table.dayedit tr.sat td:first-child{color:#3B6EA5}
+table.dayedit tr.sun td:first-child{color:var(--rose)}
+.ynbtn{border:1px solid var(--line);background:transparent;border-radius:6px;width:34px;height:28px;cursor:pointer;font-size:14px;color:var(--ink-3)}
+.ynbtn.on{background:var(--accent-wash);border-color:transparent;color:var(--accent);font-weight:700}
+
+.banner{border-radius:8px;padding:11px 14px;font-size:12.5px;line-height:1.7;margin-bottom:14px}
+.banner.warn{background:var(--amber-wash);color:var(--amber)}
+.banner.err{background:var(--rose-wash);color:var(--rose)}
+.banner.info{background:var(--accent-wash);color:var(--accent)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink-3)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(14px);z-index:80;max-width:min(560px,92vw);
+  background:var(--ink);color:var(--ground);border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6;
+  box-shadow:0 8px 30px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;white-space:pre-line}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.warn{background:var(--amber);color:#fff}
+#toast.err{background:var(--rose);color:#fff}
+
+#sheets{display:none}
+#sheets.show{display:block;padding:22px 16px 60px;background:var(--surface-2);border-top:1px solid var(--line)}
+#previewBar{display:none;position:sticky;top:56px;z-index:20;background:color-mix(in srgb,var(--ground) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 16px}
+#previewBar.show{display:block}
+#previewBar .inner{max-width:1088px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pdfstate{font-size:12px;color:var(--ink-3)}
+.sheet{background:#fff;color:#000;width:190mm;margin:0 auto 18px;padding:9mm 9mm;font-family:var(--jp);font-size:10.5pt;line-height:1.6;box-shadow:var(--shadow)}
+.rp-title{text-align:center;font-size:14pt;font-weight:700;margin-bottom:14pt}
+.rp-date{display:flex;gap:14pt;font-size:10.5pt;margin-bottom:12pt}
+.rp-cm-office{font-size:10.5pt}
+.rp-cm-name{font-size:12pt;font-weight:700;margin-bottom:12pt}
+table.rp{width:100%;border-collapse:collapse;table-layout:fixed}
+table.rp td{border:.75pt solid #000;padding:3pt 5pt;height:20pt;font-size:10.5pt;word-break:break-all}
+table.rp td.blank{border:0}
+table.rp td.lbl{background:#D9D9D9}
+table.rp td.ctr{text-align:center}
+.rp-band{background:#D9D9D9;font-weight:700;padding:2pt 4pt;margin-top:12pt;font-size:10.5pt}
+.rp-sub{font-weight:700;padding:3pt 4pt;font-size:10.5pt}
+table.rp-cal{width:100%;border-collapse:collapse;table-layout:fixed}
+table.rp-cal th{border:.75pt solid #000;background:#D9D9D9;font-size:10.5pt;font-weight:700;height:16pt}
+table.rp-cal td{border:.75pt solid #000;height:32pt;vertical-align:top;text-align:center;font-size:10.5pt;padding:2pt 0}
+table.rp-cal td .o{display:block;font-size:12pt;line-height:1.1}
+.rp-narr{border:.75pt solid #000;min-height:52mm;padding:6pt 7pt;font-size:10pt;line-height:1.75;white-space:pre-wrap}
+table.rp-log{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:6pt}
+table.rp-log th{border:.75pt solid #000;background:#D9D9D9;font-size:9.5pt;font-weight:700;padding:3pt}
+table.rp-log td{border:.75pt solid #000;font-size:9pt;padding:3pt 4pt;height:26pt;vertical-align:top;line-height:1.5;word-break:break-all}
+table.rp-log td.c{text-align:center}
+table.rp-log tr.sat td:first-child,table.rp-log tr.sun td:first-child{font-weight:700}
+
+@media print{
+  @page{size:A4 portrait;margin:0}
+  .topbar,.app,#previewBar{display:none!important}
+  #sheets.show{padding:0;background:#fff;border:0}
+  #sheets{display:block!important}
+  body{background:#fff}
+  .sheet{width:auto;margin:0;padding:10mm 10mm;box-shadow:none;break-after:page;page-break-after:always}
+  .sheet:last-child{break-after:auto;page-break-after:auto}
+  table.rp-log{break-inside:auto}
+  table.rp-log tr{break-inside:avoid}
+  table.rp-log thead{display:table-header-group}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><b>報告書メーカー</b><span>ALOHA CARES</span></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-mode="day" aria-selected="true">① 通所</button>
+      <button class="tab" role="tab" data-mode="visit" aria-selected="false">② 訪問</button>
+      <button class="tab" role="tab" data-mode="house" aria-selected="false">③ ハウス</button>
+    </div>
+    <div class="ymbox"><label for="ym">対象月</label><input id="ym" type="month"></div>
+    <select class="plain" id="printScope"><option value="all">全員まとめて</option><option value="done">確定済だけ</option><option value="pick">選択した人だけ</option></select>
+    <select class="plain" id="pdfMode"><option value="one">1つのPDFにまとめる</option><option value="each">1人ずつ別のPDF</option></select>
+    <button class="btn" id="btnPreview">プレビュー</button>
+    <button class="btn primary" id="btnPdf">印刷（PDF保存）</button>
+  </div>
+</div>
+
+<div class="app">
+  <div id="storeBanner"></div>
+
+  <section class="card">
+    <div class="card-h"><span class="step">1</span><h2 id="h1">ファイルを読み込む</h2><span class="sp"></span><button class="btn ghost sm" id="btnClear">読み込みをやり直す</button></div>
+    <div class="card-b">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="ファイルを選択">
+        <p class="big" id="dropBig">ファイルをここにドロップ</p>
+        <p class="hint" id="dropHint">タップしてファイルを選ぶこともできます。</p>
+        <input type="file" id="fileInput" multiple hidden>
+      </div>
+      <div class="filelist" id="filelist"></div>
+      <div id="parseMsg"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="step">2</span><h2>共通欄</h2></div>
+    <div class="card-b">
+      <div class="grid3" id="settingsGrid"></div>
+      <p class="hint" id="settingsHint" style="margin:12px 0 0"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="step">3</span><h2 id="h3">利用者ごとに確認する</h2><span class="sp"></span><button class="btn sm" id="btnGenAll" hidden>まとめて下書き</button><span class="hint" id="rosterCount"></span></div>
+    <div class="card-b"><div id="rosterArea"></div>
+      <div class="narrbar" style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+        <span class="hint">印刷範囲：<b id="scopeEcho">全員まとめて</b></span>
+        <span style="margin-left:auto"></span>
+        <button class="btn" id="btnPreview2">プレビューを見る</button>
+        <button class="btn primary" id="btnPdf2">印刷（PDF保存）</button>
+      </div>
+      <p class="hint" style="margin:10px 0 0" id="pdfHowTo"></p>
+    </div>
+  </section>
+
+  <section class="card" id="editorCard" hidden>
+    <div class="card-h"><span class="step">4</span><h2 id="edName">—</h2><span class="sp"></span><button class="btn ghost sm" id="btnCloseEd">閉じる</button></div>
+    <div class="card-b" id="editorBody"></div>
+  </section>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="previewBar"><div class="inner">
+  <span class="hint" id="previewCount"></span>
+  <span style="margin-left:auto"></span>
+  <span class="pdfstate" id="pdfState"></span>
+  <button class="btn sm" id="btnPrint2">ブラウザの印刷を試す</button>
+  <button class="btn sm" id="btnClosePreview">閉じる</button>
+</div></div>
+<div id="sheets"></div>
+
+<script>
+"use strict";
+
+/* ============================ モード定義 ============================ */
+const MODES = {
+  day: {
+    label:"通所", step3:"利用者ごとに確認する",
+    h1:"カイポケのファイルを読み込む",
+    dropBig:"介護記録PDF と 被保険者証情報CSV をここにドロップ",
+    dropHint:"業務日誌PDFにも対応しています。タップしてファイルを選ぶこともできます。",
+    accept:".pdf,.csv",
+    reportTitle:"通所介護サービス実施状況報告書",
+    defaults:{ office:"アロハデイサービス", kanri:"", kinyu:"", reportDate:"", dummy:"アロハ花子", kinyuList:"" },
+    fields:[["office","事業所名","アロハデイサービス"],["kanri","管理者","池田　友子"],["kinyu","記入者（既定）","菊地　順子"],["reportDate","報告年月日","date"],["dummy","印刷しない利用者","アロハ花子"],["kinyuList","記入者の候補（取込で自動追加）","読み込むと自動で入ります"]],
+    hint:"報告年月日は対象月の末日が初期値です。全員分に反映されます。"
+  },
+  visit: {
+    label:"訪問", step3:"利用者ごとに確認する",
+    h1:"サービスご提供実績を読み込む",
+    dropBig:"サービスご提供実績PDF と 被保険者証情報CSV をここにドロップ",
+    dropHint:"利用者ごとのPDFを何枚まとめて入れても構いません。",
+    accept:".pdf,.csv",
+    reportTitle:"訪問介護サービス実施状況報告書",
+    defaults:{ office:"アロハヘルパーステーション事業所", kanri:"", kinyu:"", reportDate:"", dummy:"アロハ花子", kinyuList:"" },
+    fields:[["office","事業所名","アロハヘルパーステーション事業所"],["kanri","管理者","池田　友子"],["kinyu","記入者（既定）",""],["reportDate","報告年月日","date"],["dummy","印刷しない利用者","アロハ花子"],["kinyuList","記入者の候補（取込で自動追加）","読み込むと自動で入ります"]],
+    hint:"報告年月日は対象月の末日が初期値です。全員分に反映されます。"
+  },
+  house: {
+    label:"ハウス", step3:"入居者ごとに確認する",
+    h1:"LINEと介護記録を読み込む",
+    dropBig:"LINEトーク履歴（.txt）と 介護記録PDF をここにドロップ",
+    dropHint:"LINEはトークルーム → 設定 → トーク履歴を送信 で出力したファイルです。介護記録PDFのオンコール・モーニングコールの記録もあわせて読みます。",
+    accept:".txt,.pdf",
+    reportTitle:"アロハハウス 生活記録",
+    defaults:{ office:"アロハハウス", kanri:"", kinyu:"", residents:"木藤 慧, 塚野 節子, 新城 早苗", logUser:"アロハ花子", kinyuList:"" },
+    fields:[["office","施設名","アロハハウス"],["kanri","管理者","池田　友子"],["kinyu","記入者（既定）",""],["logUser","ハウス日誌の記録先","アロハ花子"],["kinyuList","記入者の候補（取込で自動追加）","読み込むと自動で入ります"],["residents","入居者（カンマ区切り）","木藤 慧, 塚野 節子, 新城 早苗"]],
+    hint:"オンコールとモーニングコールは介護記録の「ハウス日誌の記録先」に入っている分も読みます。入居者名は姓で照合します。"
+  }
+};
+
+/* ============================ 状態 ============================ */
+let db = null, sample = null;
+let mode = "day";
+let ym = "";
+let settings = {};
+let people = {};
+let selected = null;
+let unsubMonth = null;
+let suppressSave = false;
+let files = [];
+let lineMsgs = [];   // ③ 用（この画面のあいだだけ保持）
+let staffAddedCount = 0;
+let houseRecs = {};  // ③ 用の介護記録
+
+const WD = ["月","火","水","木","金","土","日"];
+const RE_TIME = /(\d{1,2}\s*[:：]\s*\d{2})\s*[〜～~－ー-]\s*(\d{1,2}\s*[:：]\s*\d{2})/;
+const RE_RIYOU = new RegExp("利用[\\s\\n]*[:：]?[\\s\\n]*[○〇◯\\u25CB\\u3007\\u25EF]");
+const RE_YM = /(?:令和|R)?\s*(\d{1,4})\s*年\s*(\d{1,2})\s*月/;
+const RE_MD = /(\d{1,2})\s*月\s*(\d{1,2})\s*日/;
+
+function nowYm(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function ymParts(s){ const [y,m]=s.split("-").map(Number); return {y,m}; }
+function lastDay(y,m){ return new Date(y,m,0).getDate(); }
+function norm(s){ return (s||"").normalize("NFKC").replace(/[ 　]/g,""); }
+function nfkc(s){ return (s||"").normalize("NFKC"); }
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toYear(y){ return y<1000 ? y+2018 : y; }
+function cfg(){ return MODES[mode]; }
+function set(k){ return (settings[mode]||{})[k] || ""; }
+function dowOf(y,m,d){ return (new Date(y,m-1,d).getDay()+6)%7; }
+
+/* ============================ 保存 ============================ */
+const LS = { s:"aloha.settings.v2", m:()=>"aloha."+mode+"."+ym, last:"aloha.last", hsrc:()=>"aloha.housesrc."+ym };
+function monthDoc(){
+  const slim = {};
+  for (const k in people){ const p = { ...people[k] }; delete p.records; slim[k] = p; }
+  return { people:slim, files, updatedAt:new Date().toISOString() };
+}
+let saveTimer = null, pending = null;
+function save(){
+  if (suppressSave) return;
+  const key = mode + "-" + ym;
+  try { localStorage.setItem(LS.m(), JSON.stringify(monthDoc())); localStorage.setItem(LS.s, JSON.stringify(settings)); } catch(e){}
+  if (!db) return;
+  if (pending && pending.key !== key) flushSave();
+  pending = { key, path:"months/"+key, doc:monthDoc(), settings:JSON.parse(JSON.stringify(settings)) };
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 700);
+}
+function flushSave(){
+  clearTimeout(saveTimer);
+  const job = pending;
+  pending = null;
+  if (!db || !job) return Promise.resolve();
+  return Promise.all([
+    db.doc(job.path).set(job.doc),
+    db.doc("config/settings").set(job.settings)
+  ]).catch(e=>{
+    showStore("保存できませんでした（"+((e&&e.code)||"不明")+"）。入力はこの端末には残っています。","err");
+  });
+}
+let toastTimer = null;
+function notify(msg, kind){
+  const el = document.getElementById("toast");
+  if (!el){ try { window.alert(msg); } catch(e){} return; }
+  el.textContent = msg;
+  el.className = "show" + (kind ? " " + kind : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.className = ""; }, Math.min(12000, 4000 + msg.length*90));
+}
+let armed = null, armedTimer = null;
+function arm(btn, label, run){
+  if (armed === btn){
+    clearTimeout(armedTimer); armed = null;
+    btn.textContent = btn.dataset.orig || label;
+    run();
+    return;
+  }
+  if (armed){ armed.textContent = armed.dataset.orig; clearTimeout(armedTimer); }
+  armed = btn;
+  btn.dataset.orig = btn.textContent;
+  btn.textContent = "もう一度押すと実行";
+  notify(label);
+  armedTimer = setTimeout(()=>{ if (armed === btn){ btn.textContent = btn.dataset.orig; armed = null; } }, 6000);
+}
+function showStore(msg, kind){
+  document.getElementById("storeBanner").innerHTML = msg ? '<div class="banner '+kind+'">'+esc(msg)+"</div>" : "";
+}
+async function loadMonth(){
+  try { localStorage.setItem(LS.last, JSON.stringify({ mode, ym })); } catch(e){}
+  await flushSave();
+  if (unsubMonth){ unsubMonth(); unsubMonth = null; }
+  suppressSave = true;
+  people = {}; selected = null; files = [];
+  try {
+    const raw = localStorage.getItem(LS.m());
+    if (raw){ const d = JSON.parse(raw); people = d.people || {}; files = d.files || []; }
+  } catch(e){}
+  suppressSave = false;
+  lineMsgs = []; houseRecs = {};
+  const restored = (mode === "house") ? loadHouseSrc() : false;
+  renderFiles();
+  document.getElementById("parseMsg").innerHTML = files.length
+    ? '<div class="banner info">読み込み済みです。入力内容は保存されているので、読み込み直す必要はありません。</div>'
+    : "";
+  renderAll();
+  if (!db) return;
+  const path = "months/"+mode+"-"+ym;
+  unsubMonth = db.doc(path).onSnapshot(snap=>{
+    if (!snap.exists || snap.metadata.hasPendingWrites) return;
+    const d = snap.data();
+    if (!d || !d.people) return;
+    suppressSave = true;
+    let copy = {};
+    try { copy = JSON.parse(JSON.stringify(d.people)); } catch(e){ copy = { ...d.people }; }
+    for (const k in copy){ if (people[k] && people[k].records) copy[k].records = people[k].records; }
+    people = copy;
+    if (d.files && !files.length) files = JSON.parse(JSON.stringify(d.files));
+    if (selected && !people[selected]) selected = null;
+    suppressSave = false;
+    renderAll();
+  }, ()=>{});
+}
+
+/* ============================ CSV ============================ */
+function decodeBytes(buf){
+  const bytes = new Uint8Array(buf);
+  let text = null;
+  try { text = new TextDecoder("utf-8",{fatal:true}).decode(bytes); } catch(e){}
+  if (text === null || text.indexOf("\uFFFD") >= 0){
+    for (const enc of ["shift_jis","euc-jp"]){
+      try {
+        const t = new TextDecoder(enc).decode(bytes);
+        if (t.indexOf("\uFFFD") < 0){ text = t; break; }
+        if (text === null) text = t;
+      } catch(e){}
+    }
+  }
+  if (text === null) text = new TextDecoder("utf-8").decode(bytes);
+  return text.replace(/^﻿/,"");
+}
+function parseCsvText(text){
+  const rows=[]; let row=[], cell="", q=false;
+  for (let i=0;i<text.length;i++){
+    const c=text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ cell+='"'; i++; } else q=false; } else cell+=c; }
+    else if (c === '"') q=true;
+    else if (c === ","){ row.push(cell); cell=""; }
+    else if (c === "\n"){ row.push(cell); rows.push(row); row=[]; cell=""; }
+    else if (c === "\r"){}
+    else cell+=c;
+  }
+  if (cell.length || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
+}
+function pick(rec, keys){
+  for (const k of keys){ for (const h in rec){ if (norm(h) === norm(k) && rec[h]) return rec[h]; } }
+  for (const k of keys){ for (const h in rec){ if (norm(h).indexOf(norm(k)) >= 0 && rec[h]) return rec[h]; } }
+  return "";
+}
+function parseMaster(text){
+  const rows = parseCsvText(text);
+  if (!rows.length) return {};
+  const head = rows[0].map(h=>h.trim());
+  const iName = head.findIndex(h=>norm(h)===norm("利用者名")) >= 0
+    ? head.findIndex(h=>norm(h)===norm("利用者名"))
+    : head.findIndex(h=>/氏名|利用者/.test(h));
+  const out = {};
+  for (let r=1;r<rows.length;r++){
+    const row = rows[r], rec = {};
+    head.forEach((h,i)=>{ rec[h.trim()] = (row[i]||"").trim(); });
+    const nm = (row[iName]||"").trim();
+    if (!nm) continue;
+    out[norm(nm)] = {
+      name: nm,
+      cmOffice: pick(rec, ["担当居宅支援事業所","居宅介護支援事業所","居宅支援事業所","担当事業所"]),
+      cmName:   pick(rec, ["担当ケアマネ","担当介護支援専門員","ケアマネジャー","介護支援専門員"]),
+      care:     pick(rec, ["要介護度","要介護状態区分","介護度"])
+    };
+  }
+  return out;
+}
+
+/* ============================ PDF 解析 ============================ */
+async function parsePdf(buf){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  return mode === "visit" ? await parseVisitDoc(pdf) : await parseDoc(pdf);
+}
+
+const RE_HM = /^\d{1,2}[:：]\d{2}$/;
+const RE_DATE_FULL = /^\d{2,4}年\d{1,2}月\d{1,2}日$/;
+
+function groupLines(items){
+  const arr = items.filter(i=>i.str && i.str.trim() !== "").map(i=>({
+    str:i.str, x:i.transform[4], y:i.transform[5], w:i.width||0, h:Math.abs(i.transform[3])||10
+  }));
+  arr.sort((a,b)=> (b.y - a.y) || (a.x - b.x));
+  const lines = [];
+  for (const it of arr){
+    const last = lines[lines.length-1];
+    const tol = Math.max(2.5, it.h*0.5);
+    if (last && Math.abs(last.y - it.y) <= tol){ last.items.push(it); }
+    else lines.push({ y:it.y, items:[it] });
+  }
+  lines.forEach(l=>l.items.sort((a,b)=>a.x-b.x));
+  return lines;
+}
+function runsOf(line){
+  const out=[]; let cur=null;
+  for (const it of line.items){
+    const gap = it.h*0.32;
+    if (cur && it.x - (cur.x + cur.w) < gap){ cur.str += it.str; cur.w = (it.x + it.w) - cur.x; }
+    else { cur = { str:it.str, x:it.x, w:it.w }; out.push(cur); }
+  }
+  return out.map(r=>({ str:r.str.trim(), x:r.x, w:r.w })).filter(r=>r.str!=="");
+}
+function lineText(line){ return line.items.map(i=>i.str).join(""); }
+
+/* ---- 罫線からテーブル構造を復元 ---- */
+function mtx(a,b){return [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];}
+function mpt(m,x,y){return [m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]];}
+async function pageRules(page){
+  const OPS = pdfjsLib.OPS;
+  const ol = await page.getOperatorList();
+  let ctm=[1,0,0,1,0,0]; const stack=[]; const H=[], V=[];
+  const seg=(p1,p2)=>{
+    if (Math.abs(p1[1]-p2[1])<0.8 && Math.abs(p1[0]-p2[0])>2) H.push({y:(p1[1]+p2[1])/2,x1:Math.min(p1[0],p2[0]),x2:Math.max(p1[0],p2[0])});
+    else if (Math.abs(p1[0]-p2[0])<0.8 && Math.abs(p1[1]-p2[1])>2) V.push({x:(p1[0]+p2[0])/2,y1:Math.min(p1[1],p2[1]),y2:Math.max(p1[1],p2[1])});
+  };
+  for (let i=0;i<ol.fnArray.length;i++){
+    const fn=ol.fnArray[i], args=ol.argsArray[i];
+    if (fn===OPS.save) stack.push(ctm.slice());
+    else if (fn===OPS.restore) ctm = stack.pop() || [1,0,0,1,0,0];
+    else if (fn===OPS.transform) ctm = mtx(ctm,args);
+    else if (fn===OPS.constructPath){
+      const ops=args[0], co=args[1]; let j=0, cx=0, cy=0, sx=0, sy=0;
+      for (const op of ops){
+        if (op===OPS.moveTo){ cx=co[j]; cy=co[j+1]; sx=cx; sy=cy; j+=2; }
+        else if (op===OPS.lineTo){ const nx=co[j], ny=co[j+1]; j+=2; seg(mpt(ctm,cx,cy), mpt(ctm,nx,ny)); cx=nx; cy=ny; }
+        else if (op===OPS.curveTo){ j+=6; cx=co[j-2]; cy=co[j-1]; }
+        else if (op===OPS.closePath){ seg(mpt(ctm,cx,cy), mpt(ctm,sx,sy)); cx=sx; cy=sy; }
+        else if (op===OPS.rectangle){
+          const x=co[j], y=co[j+1], w=co[j+2], h=co[j+3]; j+=4;
+          const a=mpt(ctm,x,y), b=mpt(ctm,x+w,y+h);
+          const x1=Math.min(a[0],b[0]), x2=Math.max(a[0],b[0]), y1=Math.min(a[1],b[1]), y2=Math.max(a[1],b[1]);
+          if (x2-x1 < 0.8 && y2-y1 > 2) V.push({x:(x1+x2)/2,y1,y2});
+          else if (y2-y1 < 0.8 && x2-x1 > 2) H.push({y:(y1+y2)/2,x1,x2});
+          else if (x2-x1 > 2 && y2-y1 > 2){
+            H.push({y:y1,x1,x2}); H.push({y:y2,x1,x2});
+            V.push({x:x1,y1,y2}); V.push({x:x2,y1,y2});
+          }
+        }
+        else { j+=2; }
+      }
+    }
+  }
+  return { H, V };
+}
+function buildGrid(H, V, crossY){
+  const vlong = V.filter(l=>l.y2-l.y1 >= 20 && (crossY==null || (l.y1 <= crossY && l.y2 >= crossY)));
+  if (vlong.length < 2) return null;
+  const xs = [];
+  vlong.map(l=>l.x).sort((a,b)=>a-b).forEach(x=>{
+    const last = xs[xs.length-1];
+    if (last !== undefined && x - last <= 2) return;
+    xs.push(x);
+  });
+  const cols = [];
+  for (let c=0;c<xs.length-1;c++){
+    const x1 = xs[c], x2 = xs[c+1];
+    if (x2 - x1 < 6) continue;
+    const m1 = x1 + (x2-x1)*0.25, m2 = x1 + (x2-x1)*0.75;
+    const ys = [];
+    H.filter(l=>l.x1 <= m1+1 && l.x2 >= m2-1).map(l=>l.y).sort((a,b)=>b-a).forEach(y=>{
+      const last = ys[ys.length-1];
+      if (last !== undefined && last - y <= 1.5) return;
+      ys.push(y);
+    });
+    if (ys.length >= 2) cols.push({ x1, x2, ys });
+  }
+  return cols.length ? cols : null;
+}
+function cellRange(col, y){
+  for (let i=0;i<col.ys.length-1;i++){
+    if (y <= col.ys[i] + 0.5 && y > col.ys[i+1] - 0.5) return { top:col.ys[i], bottom:col.ys[i+1] };
+  }
+  return null;
+}
+
+/* ===== 業務日誌 ===== */
+function parseNippouPage(lines, users, diag){
+  const all = lines.map(lineText).join("\n");
+  const md = all.match(/(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  if (!md) return false;
+  const dateStr = md[1]+"年"+md[2]+"月"+md[3]+"日", day = +md[3];
+  const flat = norm(all);
+  if (flat.indexOf("記録種別") >= 0) return false;
+  if (flat.indexOf("業務日誌") < 0 && !(flat.indexOf("利用者名")>=0 && flat.indexOf("欠席者名")>=0)) return false;
+  diag.nippouPages++;
+
+  const hi = lines.findIndex(l=>{
+    const t = norm(lineText(l));
+    return t.indexOf("利用者名")>=0 && t.indexOf("開始")>=0 && t.indexOf("終了")>=0;
+  });
+  if (hi >= 0){
+    const cols = runsOf(lines[hi]).map(r=>r.str).slice(3);
+    for (let li=hi+1; li<lines.length; li++){
+      const t = norm(lineText(lines[li]));
+      if (t.indexOf("利用者計")>=0 || t.indexOf("欠席者名")>=0 || t.indexOf("特記")===0) break;
+      const runs = runsOf(lines[li]);
+      const ti = runs.findIndex(r=>RE_HM.test(r.str));
+      if (ti < 1) continue;
+      const before = runs.slice(0,ti).map(r=>r.str);
+      let name = "";
+      for (let i=before.length-1;i>=0;i--){ if (/様$/.test(before[i])){ name = before[i]; break; } }
+      if (!name) name = before[before.length-1] || "";
+      name = name.replace(/様$/,"").trim();
+      if (!name) continue;
+      const start = runs[ti].str.replace("：",":");
+      const end   = (runs[ti+1] && RE_HM.test(runs[ti+1].str)) ? runs[ti+1].str.replace("：",":") : "";
+      const vals  = runs.slice(ti+2).map(r=>r.str);
+      const key = norm(name);
+      if (!users[key]) users[key] = { name, records:[] };
+      const parts = [];
+      for (let i=0;i<cols.length && i<vals.length;i++){
+        if (vals[i] && vals[i] !== "-") parts.push(cols[i]+"："+vals[i]);
+      }
+      users[key].records.push({ date:dateStr, day, kind:"利用", time:(start&&end)?start+"〜"+end:"", content:parts.join("　") });
+      diag.attRows++;
+    }
+  }
+
+  const sh = lines.findIndex(l=>{ const t = norm(lineText(l)); return t.indexOf("職員名")>=0 && t.indexOf("職種")>=0; });
+  if (sh >= 0){
+    const nameRun = runsOf(lines[sh]).find(r=>norm(r.str).indexOf("職員名") >= 0);
+    const nx = nameRun ? nameRun.x : null;
+    for (let li=sh+1; li<lines.length; li++){
+      const t = norm(lineText(lines[li]));
+      if (t.indexOf("職員計")>=0 || t.indexOf("利用者名")>=0 || t.indexOf("利用者情報")>=0) break;
+      const runs = runsOf(lines[li]);
+      let cand = null;
+      if (nx != null) cand = runs.find(r=>Math.abs(r.x - nx) < 40 && r.str.length >= 2);
+      if (!cand) cand = runs.find(r=>r.str.length >= 2);
+      const nm = cleanStaff(cand && cand.str);
+      if (nm && /^[一-龥ぁ-んァ-ヶー]{2,8}$/.test(nm) && !/職種|職員|介護|看護|調理|相談|訓練|ケアマネ|利用者|欠席/.test(nm)){
+        diag.staff[nm] = (diag.staff[nm]||0) + 1;
+      }
+    }
+  }
+
+  const si = lines.findIndex(l=>norm(lineText(l)).indexOf("特記")===0);
+  if (si >= 0){
+    let cur = null, curName = "";
+    for (let li=si; li<lines.length; li++){
+      const raw = lineText(lines[li]).replace(/^特記/,"").trim();
+      if (!raw) continue;
+      const mm = raw.match(/^【(.+?)】$/);
+      if (mm){ curName = mm[1].replace(/様$/,"").trim(); cur = norm(curName); continue; }
+      if (!cur) continue;
+      if (!users[cur]) users[cur] = { name:curName, records:[] };
+      const rec = raw.match(/[（(]([^（）()]{2,12})[)）]\s*$/);
+      const raw2 = rec ? cleanStaff(rec[1]) : "";
+      let who = "";
+      if (raw2 && /^[一-龥ぁ-んァ-ヶー]{2,8}$/.test(raw2)){
+        for (const kn in diag.staff){
+          if (kn === raw2 || kn.indexOf(raw2) === 0 || raw2.indexOf(kn) === 0){ who = kn.length >= raw2.length ? kn : raw2; break; }
+        }
+        if (who) diag.staff[who] = (diag.staff[who]||0) + 1;
+      }
+      users[cur].records.push({ date:dateStr, day, kind:"特記", time:"", content:raw, recorder:who });
+      diag.noteRows++;
+    }
+  }
+  return true;
+}
+
+/* ===== 介護記録（罫線ベース） ===== */
+const KIROKU_COLS = ["日付","記録種別","時間","内容","記録者"];
+function parseKirokuGrid(cols, its){
+  const colIndex = (x)=>{ for (let i=0;i<cols.length;i++){ if (x>=cols[i].x1-1 && x<cols[i].x2+1) return i; } return -1; };
+  const find = (label)=> its.find(t=>norm(t.str)===label);
+  const h = {};
+  for (const L of KIROKU_COLS){ const t = find(L); if (t) h[L] = colIndex(t.x + t.w/2); }
+  if (h["日付"]==null || h["記録種別"]==null || h["内容"]==null) return null;
+  const hy = find("記録種別").y;
+  const body = its.filter(t=>t.y < hy - 2);
+  const cContent = cols[h["内容"]];
+  const bounds = cContent.ys.filter(y=>y < hy);
+  const rows = [];
+  for (let i=0;i<bounds.length-1;i++) rows.push({ top:bounds[i], bottom:bounds[i+1], cells:{} });
+  if (!rows.length) return null;
+  const put = (row,key,txt)=>{ row.cells[key] = (row.cells[key]||"") + txt; };
+  for (const t of body){
+    const ci = colIndex(t.x + t.w/2);
+    if (ci < 0) continue;
+    let key = null;
+    for (const L of KIROKU_COLS) if (h[L] === ci) key = L;
+    if (!key) continue;
+    if (key === "内容"){
+      const r = rows.find(r=>t.y <= r.top+0.5 && t.y > r.bottom-0.5);
+      if (r) put(r,"内容", t.str + " ");
+    } else {
+      const cr = cellRange(cols[ci], t.y);
+      if (!cr) continue;
+      for (const r of rows){ if (r.top <= cr.top+0.5 && r.bottom >= cr.bottom-0.5) put(r,key,t.str); }
+    }
+  }
+  return rows.map(r=>({
+    date: norm(r.cells["日付"]||""),
+    kind: (r.cells["記録種別"]||"").trim(),
+    time: (r.cells["時間"]||"").trim(),
+    content: (r.cells["内容"]||"").trim(),
+    recorder: (r.cells["記録者"]||"").trim()
+  })).filter(r=>r.kind || r.content);
+}
+
+/* 介護記録のページ跨ぎで空になった日付を埋める */
+function fillDates(records){
+  for (let i=0;i<records.length;i++){
+    if (records[i].date) continue;
+    let j = i; while (j < records.length && !records[j].date) j++;
+    const prev = i > 0 ? records[i-1].date : "";
+    const next = j < records.length ? records[j].date : "";
+    const acrossPage = records[j-1].last && j < records.length && records[j].first && records[j].page === records[j-1].page + 1;
+    const fill = acrossPage ? (next || prev) : (prev || next);
+    for (let k=i;k<j;k++) records[k].date = fill;
+    i = j - 1;
+  }
+  let ck = "";
+  for (const r of records){
+    if (r.kind) ck = r.kind; else r.kind = ck;
+    const dm = (r.date||"").match(/(\d{1,2})月(\d{1,2})日/);
+    r.day = dm ? +dm[2] : 0;
+    delete r.page; delete r.first; delete r.last;
+  }
+}
+
+async function parseDoc(pdf){
+  const users = {};
+  const diag = { pages:pdf.numPages, nippouPages:0, kirokuPages:0, attRows:0, noteRows:0, kirokuRows:0, skipped:[], staff:{} };
+  let lastKey = null;
+  const kirokuKeys = new Set();
+  for (let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const lines = groupLines(tc.items);
+    if (parseNippouPage(lines, users, diag)) continue;
+
+    const nameLine = lines.find(l=>/氏\s*名\s*[:：]/.test(lineText(l)));
+    let key = null;
+    if (nameLine){
+      const m = lineText(nameLine).match(/氏\s*名\s*[:：]\s*(.+)/);
+      if (m){
+        const name = m[1].split("(")[0].split("（")[0].trim();
+        key = norm(name);
+        if (!users[key]) users[key] = { name, records:[] };
+        lastKey = key;
+      }
+    }
+    if (!key) key = lastKey;
+    if (!key){ diag.skipped.push(p); continue; }
+
+    let cols = null;
+    try { const {H,V} = await pageRules(page); cols = buildGrid(H,V); } catch(e){ cols = null; }
+    const its = tc.items.filter(i=>i.str && i.str.trim()).map(i=>({
+      str:i.str, x:i.transform[4], y:i.transform[5] + Math.abs(i.transform[3])*0.32, w:i.width||0
+    }));
+    const recs = cols ? parseKirokuGrid(cols, its) : null;
+    if (!recs){ diag.skipped.push(p); continue; }
+    diag.kirokuPages++;
+    kirokuKeys.add(key);
+    recs.forEach((r,i)=>{ r.page = p; r.first = (i===0); r.last = (i===recs.length-1); users[key].records.push(r); });
+    diag.kirokuRows += recs.length;
+  }
+  kirokuKeys.forEach(k=>fillDates(users[k].records));
+  return { users, diag };
+}
+
+
+/* ===== ②サービスご提供実績 ===== */
+const VISIT_COLS = ["日付","提供時間","分","担当ヘルパー名","サービス内容","実施内容","特記事項"];
+function parseVisitPage(cols, its, headRuns, hy){
+  const colIndex = (x)=>{ for (let i=0;i<cols.length;i++){ if (x>=cols[i].x1-1 && x<cols[i].x2+1) return i; } return -1; };
+  const h = {};
+  for (const L of VISIT_COLS){
+    const r = headRuns.find(r=>norm(r.str) === L);
+    if (r) h[L] = colIndex(r.x + r.w/2);
+  }
+  if (h["日付"]==null || h["実施内容"]==null) return null;
+  const body = its.filter(t=>t.y < hy - 2);
+  const cDate = cols[h["日付"]];
+  const bounds = cDate.ys.filter(y=>y < hy);
+  const rows = [];
+  for (let i=0;i<bounds.length-1;i++) rows.push({ top:bounds[i], bottom:bounds[i+1], cells:{} });
+  if (!rows.length) return null;
+  for (const t of body){
+    const ci = colIndex(t.x + t.w/2);
+    if (ci < 0) continue;
+    let key = null;
+    for (const L of VISIT_COLS) if (h[L] === ci) key = L;
+    if (!key) continue;
+    const r = rows.find(r=>t.y <= r.top+0.5 && t.y > r.bottom-0.5);
+    if (r) r.cells[key] = (r.cells[key]||"") + nfkc(t.str) + (key==="日付"||key==="分"||key==="提供時間" ? "" : " ");
+  }
+  return rows.map(r=>({
+    dateCell:(r.cells["日付"]||"").trim(),
+    time:(r.cells["提供時間"]||"").trim(),
+    min:(r.cells["分"]||"").trim(),
+    helper:(r.cells["担当ヘルパー名"]||"").trim(),
+    service:(r.cells["サービス内容"]||"").trim(),
+    doneT:(r.cells["実施内容"]||"").trim(),
+    note:(r.cells["特記事項"]||"").trim()
+  })).filter(r=>/\d{1,2}月\d{1,2}日/.test(norm(r.dateCell)));
+}
+async function parseVisitDoc(pdf){
+  const users = {};
+  const diag = { pages:pdf.numPages, visitPages:0, visitRows:0, skipped:[], ym:"", staff:{} };
+  for (let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const lines = groupLines(tc.items);
+    const flat = lines.map(lineText).map(nfkc);
+    const joined = flat.join("\n");
+    if (joined.indexOf("サービスご提供実績") < 0){ diag.skipped.push(p); continue; }
+    const ymM = joined.match(/令和\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月分/);
+    if (ymM) diag.ym = (2018 + +ymM[1]) + "-" + String(+ymM[2]).padStart(2,"0");
+    let name = "";
+    for (const l of lines){
+      const t = nfkc(lineText(l)).trim();
+      const m = t.match(/^(\S.{0,20}?)\s*様$/);
+      if (m && !/実績|事業所|報告|サービス/.test(m[1])){
+        const rs = runsOf(l).map(r=>nfkc(r.str)).filter(x=>x && x !== "様");
+        name = (rs.length >= 2 ? rs.join(" ") : m[1]).replace(/\s*様\s*$/,"").replace(/\s+/g," ").trim();
+        break;
+      }
+    }
+    if (!name){ diag.skipped.push(p); continue; }
+    const key = norm(name);
+    if (!users[key]) users[key] = { name, records:[] };
+
+    const hLine = lines.find(l=>runsOf(l).some(r=>norm(r.str) === "日付"));
+    if (!hLine){ diag.skipped.push(p); continue; }
+    const hy = hLine.y;
+    const headRuns = [];
+    lines.filter(l=>Math.abs(l.y - hy) < 14).forEach(l=>runsOf(l).forEach(r=>headRuns.push(r)));
+
+    let cols = null;
+    try { const {H,V} = await pageRules(page); cols = buildGrid(H,V,hy); } catch(e){ cols = null; }
+    const its = tc.items.filter(i=>i.str && i.str.trim()).map(i=>({
+      str:i.str, x:i.transform[4], y:i.transform[5] + Math.abs(i.transform[3])*0.32, w:i.width||0
+    }));
+    const rows = cols ? parseVisitPage(cols, its, headRuns, hy) : null;
+    if (!rows || !rows.length){ diag.skipped.push(p); continue; }
+    diag.visitPages++;
+    for (const r of rows){
+      const dm = norm(r.dateCell).match(/(\d{1,2})月(\d{1,2})日/);
+      const day = dm ? +dm[2] : 0;
+      const dstr = diag.ym ? (diag.ym.split("-")[0]+"年"+(+diag.ym.split("-")[1])+"月"+day+"日") : (dm ? dm[0] : "");
+      const content = [r.service && ("サービス："+r.service), r.doneT, r.note].filter(Boolean).join(" ／ ");
+      users[key].records.push({ date:dstr, day, kind:"訪問", time:r.time.replace(/\s/g,""), content, recorder:r.helper });
+      diag.visitRows++;
+    }
+  }
+  return { users, diag };
+}
+
+/* ============================ LINE 解析（③） ============================ */
+function parseLine(text){
+  const t = text.replace(/\r\n/g,"\n");
+  const msgs = []; let cur = null;
+  for (const raw of t.split("\n")){
+    const line = raw.replace(/​/g,"");
+    const dm = line.match(/^(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})/);
+    if (dm){ cur = { y:+dm[1], m:+dm[2], d:+dm[3] }; continue; }
+    const tm = line.match(/^(\d{1,2}:\d{2})[\t ](.*)$/);
+    if (tm && cur){ msgs.push({ ...cur, time:tm[1], text:tm[2] }); }
+    else if (msgs.length && line.trim()){ msgs[msgs.length-1].text += "\n" + line.trim(); }
+  }
+  return msgs;
+}
+function residentList(){
+  return (set("residents")||"").split(/[,、\n]/).map(s=>s.trim()).filter(Boolean);
+}
+function surname(name){ return name.split(/[ 　]/)[0]; }
+const RE_HOUSE_KW = /モーニングコール|オンコール|服薬|お薬|内服|薬|軟膏|塗布|外用|貼付|処方|受診|往診|訪問診療|訪問看護|歯科|通院|ご家族|家族|面会|来訪|朝食|昼食|夕食|朝ご飯|昼ご飯|夕ご飯|完食|食事/;
+function messagesFor(name, y, m){
+  const sn = surname(name);
+  const keep = [];
+  for (const g of lineMsgs){
+    if (g.y !== y || g.m !== m) continue;
+    const t = g.text;
+    if (t.indexOf(sn) >= 0 || RE_HOUSE_KW.test(t)){
+      keep.push(String(g.m).padStart(2,"0")+"/"+String(g.d).padStart(2,"0")+" "+g.time+" "+t.replace(/\n/g," "));
+    }
+  }
+  return keep.join("\n");
+}
+function recLine(r, m){
+  return String(m).padStart(2,"0")+"/"+String(r.day||0).padStart(2,"0")+" "+(r.kind||"")+" "+(r.time||"")+" "+(r.content||"").replace(/\s+/g," ").trim();
+}
+function inMonth(r, y, m){
+  const dm = (r.date||"").match(RE_YM);
+  if (dm) return toYear(+dm[1]) === y && +dm[2] === m;
+  return !!r.day;
+}
+function houseSource(name, y, m){
+  const sn = surname(name), key = norm(name);
+  const out = [];
+  const lg = houseRecs[norm(set("logUser"))];
+  if (lg && norm(set("logUser")) !== key){
+    const rows = lg.records
+      .filter(r=>inMonth(r,y,m) && (r.content||"").trim())
+      .filter(r=>RE_HOUSE_KW.test(r.content) || r.content.indexOf(sn) >= 0)
+      .map(r=>recLine(r,m));
+    if (rows.length) out.push("【ハウス日誌（"+set("logUser")+"の記録：オンコール・モーニングコール）】\n"+rows.join("\n").slice(0,3000));
+  }
+  const own = houseRecs[key];
+  if (own){
+    const rows = own.records
+      .filter(r=>inMonth(r,y,m) && (r.content||"").trim())
+      .filter(r=>RE_HOUSE_KW.test(r.content) || /ケース|食事|処置|特記/.test(r.kind||"") || /【特記】/.test(r.content))
+      .map(r=>recLine(r,m));
+    if (rows.length) out.push("【"+name+"様の記録（服薬・食事・特記）】\n"+rows.join("\n").slice(0,2500));
+  }
+  const line = messagesFor(name, y, m);
+  if (line) out.push("【職員LINE】\n"+line.slice(0,2000));
+  return out.join("\n\n");
+}
+
+/* ============================ 取込 → データ化 ============================ */
+function detectYm(users){
+  const c = {};
+  for (const k in users) for (const r of users[k].records){
+    const m = (r.date||"").match(RE_YM);
+    if (m){ const key = toYear(+m[1])+"-"+String(+m[2]).padStart(2,"0"); c[key]=(c[key]||0)+1; }
+  }
+  let best="", n=0;
+  for (const k in c) if (c[k] > n){ n=c[k]; best=k; }
+  return best;
+}
+function dayOf(s){ const m=(s||"").match(RE_MD); return m ? +m[2] : 0; }
+function padHm(s){ const m=(s||"").replace(/\s/g,"").match(/^(\d{1,2})[:：](\d{2})$/); return m ? String(+m[1]).padStart(2,"0")+":"+m[2] : ""; }
+function isDummy(name){
+  const list = (set("dummy")||"").split(/[,、\s　]+/).map(norm).filter(Boolean);
+  return list.indexOf(norm(name)) >= 0;
+}
+function cleanStaff(x){
+  return (x||"").replace(/^[★☆●・]+/,"").replace(/^アロハ[ 　]+/,"").replace(/\s+/g," ").trim();
+}
+function staffFrom(records){
+  const c = {};
+  (records||[]).forEach(r=>{
+    const nm = cleanStaff(r.recorder);
+    if (nm && nm.length <= 14) c[nm] = (c[nm]||0) + 1;
+  });
+  return Object.keys(c).sort((a,b)=>c[b]-c[a] || a.localeCompare(b,"ja")).slice(0,12).map(n=>({ name:n, n:c[n] }));
+}
+function staffOf(p){
+  if (p.records && p.records.length) return staffFrom(p.records);
+  if (p.staff && p.staff.length) return p.staff;
+  return [];
+}
+function kinyuField(p, span){
+  const staff = staffOf(p);
+  const opts = staff.map(x=>x.name);
+  (set("kinyuList")||"").split(/[,、\n]/).map(x=>x.trim()).filter(Boolean).forEach(x=>{ if (opts.indexOf(x) < 0) opts.push(x); });
+  if (set("kinyu") && opts.indexOf(set("kinyu")) < 0) opts.push(set("kinyu"));
+  const extra = [];
+  const seen = new Set(staff.map(s2=>norm(s2.name)));
+  (set("kinyuList")||"").split(/[,、\n]/).map(x=>x.trim()).filter(Boolean).forEach(x=>{
+    if (!seen.has(norm(x))){ seen.add(norm(x)); extra.push(x); }
+  });
+  if (set("kinyu") && !seen.has(norm(set("kinyu")))){ seen.add(norm(set("kinyu"))); extra.push(set("kinyu")); }
+  const chips = staff.slice(0,10).map(x=>
+    '<button type="button" class="btn staffpick'+(p.kinyu===x.name?" on":"")+'" data-n="'+esc(x.name)+'">'+esc(x.name)+'<span class="cnt">'+x.n+"</span></button>").join("")
+  + extra.slice(0,10).map(x=>
+    '<button type="button" class="btn staffpick'+(p.kinyu===x?" on":"")+'" data-n="'+esc(x)+'">'+esc(x)+"</button>").join("");
+  return '<div class="field"'+(span?' style="grid-column:1/-1"':"")+'><label>記入者</label>'
+    + '<input id="eKinyu" list="kinyuOptions" value="'+esc(p.kinyu||"")+'" placeholder="'+esc(set("kinyu")||"共通欄の記入者")+'">'
+    + (chips ? '<div class="chips"><span class="hint" style="align-self:center;margin-right:2px">'+(staff.length ? (mode==="visit"?"訪問した職員":"記録した職員") : "職員")+"</span>"+chips+"</div>"
+             : '<div class="chips"><span class="hint">共通欄の「記入者の候補」に職員名を入れると、ここにボタンが並びます。</span></div>')
+    + '<datalist id="kinyuOptions">'+opts.map(o=>'<option value="'+esc(o)+'"></option>').join("")+"</datalist></div>";
+}
+function bindKinyu(p){
+  bindField("eKinyu", v=>{ p.kinyu = v; });
+  document.querySelectorAll(".staffpick").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      p.kinyu = (p.kinyu === b.dataset.n) ? "" : b.dataset.n;
+      save(); renderEditor(); renderRoster(); renderSheets();
+    });
+  });
+}
+function digestOf(records){
+  return (records||[])
+    .filter(r=>(r.content||"").trim())
+    .map(r=>"["+(r.date||"")+"] "+(r.kind||"")+" "+(r.time||"")+" "+(r.content||"").replace(/\s+/g," ").trim())
+    .join("\n").slice(0,4500);
+}
+function timeSummary(times){
+  const ent = Object.keys(times).map(t=>[t,times[t]]).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
+  if (!ent.length) return "";
+  if (ent.length === 1) return ent[0][0];
+  return ent.map(([t,n])=>t+" "+n+"回").join("、");
+}
+function mergeKinyuList(list){
+  const cur = (set("kinyuList")||"").split(/[,、\n]/).map(x=>x.trim()).filter(Boolean);
+  const have = new Set(cur.map(norm));
+  let added = 0;
+  list.forEach(nm=>{ if (nm && !have.has(norm(nm))){ have.add(norm(nm)); cur.push(nm); added++; } });
+  if (!added) return 0;
+  settings[mode] = settings[mode] || {};
+  settings[mode].kinyuList = cur.slice(0,40).join(", ");
+  fillSettings();
+  return added;
+}
+function collectStaff(users, extra){
+  const c = { ...(extra||{}) };
+  for (const k in users){
+    (users[k].records||[]).forEach(r=>{
+      const nm = cleanStaff(r.recorder);
+      if (nm && nm.length <= 14) c[nm] = (c[nm]||0) + 1;
+    });
+  }
+  return Object.keys(c).sort((a,b)=>c[b]-c[a] || a.localeCompare(b,"ja"));
+}
+function ingest(parsed, master){
+  const detected = (parsed.diag && parsed.diag.ym) || detectYm(parsed.users);
+  if (detected && detected !== ym){ ym = detected; document.getElementById("ym").value = ym; }
+
+  for (const key in parsed.users){
+    const u = parsed.users[key];
+    const att = new Set(); const times = {};
+    for (const r of u.records){
+      const isDay   = r.kind === "利用";
+      const isVisit = r.kind === "訪問";
+      const isRec   = /利用登録/.test(r.kind) && RE_RIYOU.test(r.content);
+      if (!isDay && !isVisit && !isRec) continue;
+      const d = r.day || dayOf(r.date);
+      if (d) att.add(d);
+      const m = (r.time||"").replace(/\n/g,"").match(RE_TIME);
+      if (m){ const a=padHm(m[1]), b=padHm(m[2]); if (a && b && a < b){ const t=a+"〜"+b; times[t]=(times[t]||0)+1; } }
+    }
+    let estimated = false;
+    if (att.size === 0){
+      for (const r of u.records){ const d = r.day || dayOf(r.date); if (d) att.add(d); }
+      estimated = att.size > 0;
+    }
+    const md = master ? master[key] : null;
+    const prev = people[key] || {};
+    people[key] = {
+      name: (md && md.name) ? md.name : u.name,
+      cmOffice: prev.cmOfficeEdited ? prev.cmOffice : (md ? md.cmOffice : (prev.cmOffice||"")),
+      cmName:   prev.cmNameEdited   ? prev.cmName   : (md ? md.cmName   : (prev.cmName||"")),
+      care:     prev.careEdited     ? prev.care     : (md ? md.care     : (prev.care||"")),
+      cmOfficeEdited:!!prev.cmOfficeEdited, cmNameEdited:!!prev.cmNameEdited, careEdited:!!prev.careEdited,
+      att: prev.attEdited ? (prev.att||[]) : Array.from(att).sort((a,b)=>a-b),
+      attAuto: Array.from(att).sort((a,b)=>a-b),
+      attEdited: !!prev.attEdited,
+      estimated,
+      teikyo: prev.teikyoEdited ? prev.teikyo : timeSummary(times),
+      teikyoEdited: !!prev.teikyoEdited,
+      narrative: prev.narrative || "",
+      kinyu: prev.kinyu || "",
+      pick: !!prev.pick,
+      confirmed: !!prev.confirmed,
+      staff: staffFrom(u.records),
+      digest: digestOf(u.records),
+      records: u.records,
+      hasMaster: !!md,
+      exclude: (prev.exclude !== undefined) ? !!prev.exclude : isDummy(u.name)
+    };
+  }
+  if (master){
+    for (const key in people){
+      const md = master[key];
+      if (md && !people[key].hasMaster){
+        if (!people[key].cmOfficeEdited) people[key].cmOffice = md.cmOffice;
+        if (!people[key].cmNameEdited)   people[key].cmName   = md.cmName;
+        if (!people[key].careEdited)     people[key].care     = md.care;
+        people[key].hasMaster = true;
+      }
+    }
+  }
+  staffAddedCount = mergeKinyuList(collectStaff(parsed.users, (parsed.diag||{}).staff));
+  save(); renderAll();
+}
+function applyMasterOnly(master){
+  for (const key in master){
+    const md = master[key];
+    if (!people[key]) continue;
+    const p = people[key];
+    if (!p.cmOfficeEdited) p.cmOffice = md.cmOffice;
+    if (!p.cmNameEdited)   p.cmName   = md.cmName;
+    if (!p.careEdited)     p.care     = md.care;
+    p.hasMaster = true;
+  }
+  save(); renderAll();
+}
+function houseStaff(key){
+  const recs = [];
+  if (houseRecs[key]) recs.push(...houseRecs[key].records);
+  const lg = houseRecs[norm(set("logUser"))];
+  if (lg && norm(set("logUser")) !== key) recs.push(...lg.records);
+  return staffFrom(recs);
+}
+function saveHouseSrc(){
+  try {
+    const {y,m} = ymParts(ym);
+    const line = lineMsgs.filter(g=>g.y===y && g.m===m).map(g=>({d:g.d,t:g.time,x:String(g.text).slice(0,600)}));
+    const recs = {};
+    for (const k in houseRecs){
+      const rows = houseRecs[k].records.filter(r=>inMonth(r,y,m)).map(r=>({d:r.day,k:r.kind||"",c:String(r.content||"").slice(0,400)}));
+      if (rows.length) recs[k] = { name:houseRecs[k].name, rows };
+    }
+    localStorage.setItem(LS.hsrc(), JSON.stringify({ y, m, line, recs }));
+  } catch(e){}
+}
+function loadHouseSrc(){
+  try {
+    const raw = localStorage.getItem(LS.hsrc());
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    const {y,m} = ymParts(ym);
+    if (!d || d.y !== y || d.m !== m) return false;
+    if (!lineMsgs.length) lineMsgs = (d.line||[]).map(g=>({ y, m, d:g.d, time:g.t, text:g.x }));
+    if (!Object.keys(houseRecs).length){
+      for (const k in (d.recs||{})){
+        houseRecs[k] = { name:d.recs[k].name, records:(d.recs[k].rows||[]).map(r=>({
+          date: y+"年"+m+"月"+r.d+"日", day:r.d, kind:r.k, time:"", content:r.c
+        })) };
+      }
+    }
+    return true;
+  } catch(e){ return false; }
+}
+function ingestHouse(){
+  const {y,m} = ymParts(ym);
+  const names = residentList();
+  for (const nm of names){
+    const key = norm(nm);
+    const prev = people[key] || {};
+    const src = houseSource(nm, y, m);
+    people[key] = {
+      name: nm,
+      days: prev.days || {},
+      narrative: prev.narrative || "",
+      kinyu: prev.kinyu || "",
+      pick: !!prev.pick,
+      confirmed: !!prev.confirmed,
+      staff: houseStaff(key),
+      digest: src.slice(0,9000),
+      srcLines: src ? src.split("\n").filter(l=>l.trim() && l[0] !== "【").length : 0,
+      exclude: !!prev.exclude
+    };
+  }
+  for (const nm of names){
+    try { scanRules(people[norm(nm)]); } catch(e){}
+  }
+  staffAddedCount = mergeKinyuList(collectStaff(houseRecs));
+  saveHouseSrc();
+  save(); renderAll();
+}
+
+/* ============================ ファイル受け取り ============================ */
+async function handleFiles(list){
+  const msg = document.getElementById("parseMsg");
+  msg.innerHTML = '<div class="banner info">読み込み中…</div>';
+  let parsed = null, master = null, lastDiag = null, lineLoaded = 0, pdfHouse = 0;
+  for (const f of list){
+    const buf = await f.arrayBuffer();
+    const nm = f.name.toLowerCase();
+    try {
+      if (nm.endsWith(".pdf") && mode === "house"){
+        const r = await parsePdf(buf);
+        let n = 0;
+        for (const k in r.users){
+          houseRecs[k] = houseRecs[k] || { name:r.users[k].name, records:[] };
+          houseRecs[k].records = houseRecs[k].records.concat(r.users[k].records);
+          n += r.users[k].records.length;
+        }
+        pdfHouse += n;
+        addFile({ name:f.name, ok:n>0, note:Object.keys(r.users).length+"名・"+n+"行" });
+      } else if (nm.endsWith(".pdf")){
+        const r = await parsePdf(buf);
+        if (!parsed) parsed = { users:{}, diag:{ pages:0, nippouPages:0, kirokuPages:0, visitPages:0, attRows:0, noteRows:0, kirokuRows:0, visitRows:0, skipped:[], ym:"", staff:{} } };
+        Object.assign(parsed.users, r.users);
+        for (const key of ["pages","nippouPages","kirokuPages","visitPages","attRows","noteRows","kirokuRows","visitRows"]) parsed.diag[key] += (r.diag[key]||0);
+        parsed.diag.skipped = parsed.diag.skipped.concat(r.diag.skipped||[]);
+        if (r.diag.ym) parsed.diag.ym = r.diag.ym;
+        for (const k2 in (r.diag.staff||{})) parsed.diag.staff[k2] = (parsed.diag.staff[k2]||0) + r.diag.staff[k2];
+        lastDiag = parsed.diag;
+        addFile({ name:f.name, ok:Object.keys(r.users).length>0, note:Object.keys(r.users).length+"名" });
+      } else if (nm.endsWith(".csv")){
+        master = { ...(master||{}), ...parseMaster(decodeBytes(buf)) };
+        addFile({ name:f.name, ok:true, note:Object.keys(master).length+"件" });
+      } else if (nm.endsWith(".txt")){
+        lineMsgs = parseLine(decodeBytes(buf));
+        lineLoaded = lineMsgs.length;
+        addFile({ name:f.name, ok:lineLoaded>0, note:lineLoaded+"件" });
+      } else {
+        addFile({ name:f.name, ok:false, note:"未対応" });
+      }
+    } catch(e){ addFile({ name:f.name, ok:false, note:"読めません" }); }
+  }
+  renderFiles();
+  staffAddedCount = 0;
+  if (parsed) ingest(parsed, master);
+  else if (master) applyMasterOnly(master);
+  if (mode === "house" && (lineLoaded || pdfHouse)) ingestHouse();
+
+  const parts = []; let kind = "info";
+  const d = lastDiag;
+  if (d){
+    if (d.visitPages) parts.push("サービスご提供実績 "+d.visitPages+"人分・"+d.visitRows+"件を読み取りました。");
+    if (d.kirokuPages) parts.push("介護記録 "+d.kirokuPages+"ページ・"+d.kirokuRows+"行を読み取りました。");
+    if (d.nippouPages) parts.push("業務日誌 "+d.nippouPages+"ページを読み取りました（利用 "+d.attRows+"件、特記 "+d.noteRows+"行）。");
+    if (!d.visitPages && !d.kirokuPages && !d.nippouPages){
+      kind = "err";
+      parts.push("このPDFからは表を読み取れませんでした。カイポケから出力したPDFかご確認ください。");
+    } else if (d.skipped.length){
+      kind = "warn";
+      parts.push("読み飛ばしたページ: "+d.skipped.join(", ")+"。内容をご確認ください。");
+    }
+  }
+  if (lineLoaded){
+    const {y,m} = ymParts(ym);
+    const cnt = lineMsgs.filter(g=>g.y===y && g.m===m).length;
+    parts.push("LINE "+lineLoaded+"件を読み取りました（"+y+"年"+m+"月分は "+cnt+"件）。");
+    const cand = suggestResidents();
+    if (cand.length) parts.push("トーク内で見つかった名前: "+cand.join("、"));
+    if (!cnt) kind = "warn";
+  }
+  if (pdfHouse) parts.push("介護記録 "+pdfHouse+"行を読み取りました（オンコール・モーニングコールを含む）。");
+  if (mode === "house" && (lineLoaded || pdfHouse)) parts.push("入居者ごとの表に記録を入れました。内容を確認してください。");
+  if (staffAddedCount) parts.push("記入者の候補に職員 "+staffAddedCount+"名を追加しました。");
+  msg.innerHTML = parts.length ? '<div class="banner '+kind+'">'+esc(parts.join(" "))+"</div>" : "";
+}
+function suggestResidents(){
+  const {y,m} = ymParts(ym);
+  const c = {};
+  for (const g of lineMsgs){
+    if (g.y!==y || g.m!==m) continue;
+    const re = /([一-龥ぁ-んァ-ヶ]{2,4})\s?様/g; let mm;
+    while ((mm = re.exec(g.text))) { const n = mm[1]; if (/お疲れ|利用者|入居者|皆|職員/.test(n)) continue; c[n]=(c[n]||0)+1; }
+  }
+  return Object.keys(c).sort((a,b)=>c[b]-c[a]).slice(0,8).map(n=>n+"（"+c[n]+"）");
+}
+function addFile(rec){
+  const i = files.findIndex(f=>f.name === rec.name);
+  if (i >= 0) files[i] = rec; else files.push(rec);
+}
+function renderFiles(){
+  const host = document.getElementById("filelist");
+  host.innerHTML = files.map((f,i)=>
+    '<span class="chip '+(f.ok?"ok":"bad")+'">'+esc(f.name)+" · "+esc(f.note)
+    + '<button type="button" class="chipx" data-i="'+i+'" aria-label="この行を消す">×</button></span>').join("")
+    + (files.length > 1 ? '<button type="button" class="btn ghost sm" id="filesClear">一覧を消す</button>' : "");
+  host.querySelectorAll(".chipx").forEach(b=>{
+    b.addEventListener("click", ()=>{ files.splice(+b.dataset.i, 1); renderFiles(); save(); });
+  });
+  const c = document.getElementById("filesClear");
+  if (c) c.addEventListener("click", ()=>{ files = []; renderFiles(); save(); });
+}
+
+/* ============================ 一覧 ============================ */
+function sortedKeys(){
+  const ks = Object.keys(people);
+  if (mode === "house") return ks.sort((a,b)=>people[a].name.localeCompare(people[b].name,"ja"));
+  return ks.sort((a,b)=>{
+    const A=people[a], B=people[b];
+    return (A.cmOffice||"").localeCompare(B.cmOffice||"","ja")
+        || (A.cmName||"").localeCompare(B.cmName||"","ja")
+        || (A.name||"").localeCompare(B.name||"","ja");
+  });
+}
+function renderRoster(){
+  const area = document.getElementById("rosterArea");
+  const keys = sortedKeys();
+  document.getElementById("rosterCount").textContent = keys.length ? keys.length+"名" : "";
+  if (!keys.length){
+    area.innerHTML = '<div class="empty-state">'+(mode==="house"
+      ? "共通欄に入居者名を入れて、LINEのトーク履歴を読み込んでください。"
+      : "まだ利用者がいません。上でファイルを読み込んでください。")+"</div>";
+    return;
+  }
+  let html = '<div class="rosterwrap"><table class="roster"><thead><tr>';
+  html += '<th class="pk"><input type="checkbox" id="pickAll" title="全員を選ぶ"></th>';
+  html += mode === "house"
+    ? "<th>入居者</th><th class=num>記入済</th><th>記入者</th><th>まとめ</th><th>状態</th>"
+    : "<th>利用者</th><th>要介護度</th><th class=num>回数</th><th>提供時間</th><th>記入者</th><th>様子文</th><th>状態</th>";
+  html += "</tr></thead><tbody>";
+  let cm = null;
+  for (const k of keys){
+    const p = people[k];
+    if (mode !== "house"){
+      const label = (p.cmOffice||"（居宅支援事業所なし）") + " ／ " + (p.cmName||"（担当ケアマネなし）");
+      if (label !== cm){ cm = label; html += '<tr class="cmgroup"><td colspan="8">'+esc(label)+"</td></tr>"; }
+    }
+    const flags = [];
+    if (p.confirmed) flags.push('<span class="flag done">確定済</span>');
+    if (mode !== "house"){
+      if (!p.hasMaster) flags.push('<span class="flag err">マスタ無</span>');
+      if ((p.att||[]).length === 0) flags.push('<span class="flag err">実績なし</span>');
+      else if (p.estimated && !p.attEdited) flags.push('<span class="flag warn">日付は推定</span>');
+      if (p.attEdited) flags.push('<span class="flag edit">手修正</span>');
+    }
+    if (p.exclude) flags.push('<span class="flag warn">除外中</span>');
+    html += '<tr data-k="'+esc(k)+'"'+(k===selected?' class="sel"':"")+'>'
+         +  '<td class="pk"><input type="checkbox" class="pick" data-k="'+esc(k)+'"'+(p.pick?" checked":"")+"></td>"
+         +  "<td><b>"+esc(p.name)+"</b></td>";
+    if (mode === "house"){
+      const filled = Object.keys(p.days||{}).filter(d=>dayHas(p.days[d])).length;
+      html += '<td class="num">'+filled+"</td>"
+           +  "<td>"+esc(p.kinyu || set("kinyu") || "—")+"</td>"
+           +  "<td>"+(p.narrative ? '<span class="flag edit">'+p.narrative.length+"字</span>" : '<span class="flag warn">未作成</span>')+"</td>"
+           +  "<td>"+(flags.join(" ")||"")+"</td>";
+    } else {
+      html += "<td>"+esc(p.care||"—")+"</td>"
+           +  '<td class="num">'+((p.att||[]).length||"0")+"</td>"
+           +  "<td>"+esc(p.teikyo||"—")+"</td>"
+           +  "<td>"+esc(p.kinyu || set("kinyu") || "—")+"</td>"
+           +  "<td>"+(p.narrative ? '<span class="flag edit">'+p.narrative.length+"字</span>" : '<span class="flag warn">未作成</span>')+"</td>"
+           +  "<td>"+(flags.join(" ")||"")+"</td>";
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table></div>";
+  area.innerHTML = html;
+  area.querySelectorAll("input.pick").forEach(cb=>{
+    cb.addEventListener("click", e=>e.stopPropagation());
+    cb.addEventListener("change", ()=>{
+      people[cb.dataset.k].pick = cb.checked;
+      const sc = document.getElementById("printScope");
+      if (cb.checked && sc.value !== "pick"){ sc.value = "pick"; }
+      echoScope(); save(); renderSheets(); updatePreviewCount();
+    });
+  });
+  const all = document.getElementById("pickAll");
+  if (all){
+    all.checked = keys.length > 0 && keys.every(k=>people[k].pick);
+    all.addEventListener("click", e=>e.stopPropagation());
+    all.addEventListener("change", ()=>{
+      keys.forEach(k=>{ people[k].pick = all.checked; });
+      document.getElementById("printScope").value = all.checked ? "pick" : "all";
+      echoScope(); save(); renderRoster(); renderSheets(); updatePreviewCount();
+    });
+  }
+  area.querySelectorAll("tr[data-k]").forEach(tr=>{
+    tr.addEventListener("click", ()=>{
+      selected = tr.dataset.k; renderRoster(); renderEditor();
+      document.getElementById("editorCard").scrollIntoView({behavior:"smooth",block:"start"});
+    });
+  });
+}
+
+/* ============================ 編集 ============================ */
+function weeksOf(y,m){
+  const last = lastDay(y,m);
+  const firstDow = dowOf(y,m,1);
+  const weeks = []; let w = new Array(7).fill(0); let d = 1;
+  for (let i=firstDow;i<7 && d<=last;i++) w[i]=d++;
+  weeks.push(w);
+  while (d<=last){ w = new Array(7).fill(0); for (let i=0;i<7 && d<=last;i++) w[i]=d++; weeks.push(w); }
+  return weeks;
+}
+function renderEditor(){
+  const card = document.getElementById("editorCard");
+  if (!selected || !people[selected]){ card.hidden = true; return; }
+  card.hidden = false;
+  const p = people[selected];
+  document.getElementById("edName").textContent = p.name + " 様";
+  document.getElementById("editorBody").innerHTML = mode === "house" ? houseEditor(p) : careEditor(p);
+  if (mode === "house") bindHouseEditor(p); else bindCareEditor(p);
+  bindCommonEditor(p);
+}
+function narrBlock(p, label, genLabel){
+  return '<div class="narrbox">'
+    + '<div class="narrbar"><label class="hint" for="eNarr" style="letter-spacing:.1em">'+label+'</label>'
+    +   '<button class="btn sm" id="btnGen">'+genLabel+'</button>'
+    +   '<span class="sp" id="narrLen"></span></div>'
+    + '<textarea id="eNarr"'+(p.confirmed?" readonly":"")+' placeholder="300字程度で記入します。">'+esc(p.narrative||"")+"</textarea>"
+    + '<div class="hint">下書きは必ず内容を確認してから送付してください。</div></div>';
+}
+function careEditor(p){
+  const {y,m} = ymParts(ym);
+  const att = new Set(p.att||[]);
+  let cal = '<table class="cal"><thead><tr>'+WD.map(w=>"<th>"+w+"</th>").join("")+"</tr></thead><tbody>";
+  for (const w of weeksOf(y,m)){
+    cal += "<tr>";
+    for (const d of w){
+      if (!d) cal += '<td><span class="daybtn empty"></span></td>';
+      else cal += '<td><button type="button" class="daybtn'+(att.has(d)?" on":"")+'" data-d="'+d+'" aria-pressed="'+att.has(d)+'"><span class="d">'+d+'</span><span class="o">○</span></button></td>';
+    }
+    cal += "</tr>";
+  }
+  cal += "</tbody></table>";
+  const recs = (p.records||[]).slice(0,400);
+  const log = recs.length
+    ? '<details class="diag"><summary>取り込んだ記録を見る（'+recs.length+"行）</summary><div class=reclog><table>"
+      + recs.map(r=>"<tr><td>"+esc(r.date)+"</td><td>"+esc(r.kind)+"</td><td>"+esc((r.content||"").slice(0,140))+"</td></tr>").join("")
+      + "</table></div></details>"
+    : "";
+  return (p.estimated && !p.attEdited ? '<div class="banner warn">この方は利用実績の行が見つかりませんでした。記録のある日を仮に○にしています。カレンダーをタップして直せます。</div>' : "")
+  + (!p.hasMaster ? '<div class="banner err">被保険者証情報CSVにこの方が見つかりません。担当ケアマネと要介護度を下に入力してください。</div>' : "")
+  + '<div class="grid3" style="margin-bottom:18px">'
+  +   '<div class="field"><label>担当居宅支援事業所</label><input id="eOffice" value="'+esc(p.cmOffice||"")+'"></div>'
+  +   '<div class="field"><label>担当ケアマネ</label><input id="eCm" value="'+esc(p.cmName||"")+'"></div>'
+  +   '<div class="field"><label>要介護度</label><input id="eCare" value="'+esc(p.care||"")+'"></div>'
+  +   '<div class="field"><label>提供時間</label><input id="eTeikyo" value="'+esc(p.teikyo||"")+'" placeholder="09:00〜16:00"></div>'
+  +   kinyuField(p, true)
+  + "</div>"
+  + '<div class="editor"><div class="calwrap"><div class="hint" style="margin-bottom:8px">利用日をタップして○を付け外しできます</div>'+cal
+  +   '<div class="calfoot"><span class="count">'+att.size+'</span><span>回</span>'
+  +   '<button class="btn ghost sm" id="btnResetAtt" style="margin-left:auto"'+(p.attEdited?"":" disabled")+">自動判定に戻す</button></div></div>"
+  +   narrBlock(p, "様子及び提供時の状況", sample ? "Claudeで下書き" : "記録から文章を作る") + "</div>"
+  + log + confirmBar(p);
+}
+const HOUSE_TXT = [["morningNote","様子"],["oncallNote","オンコール内容"],["med","服薬確認"],["mealA","朝"],["mealB","昼"],["mealC","夕"],["note","特記"]];
+function houseEditor(p){
+  const {y,m} = ymParts(ym);
+  const last = lastDay(y,m);
+  mutableDays(p);
+  let rows = "";
+  for (let d=1; d<=last; d++){
+    const r = (p.days||{})[d] || {};
+    const dow = dowOf(y,m,d);
+    const cls = dow===5 ? " class=sat" : dow===6 ? " class=sun" : "";
+    rows += "<tr"+cls+'><td>'+d+" "+WD[dow]+"</td>"
+      + '<td><button type="button" class="ynbtn'+(r.morning==="○"?" on":"")+'" data-d="'+d+'" data-f="morning">'+(r.morning||"—")+"</button></td>"
+      + '<td><input data-d="'+d+'" data-f="morningNote" value="'+esc(r.morningNote||"")+'"></td>'
+      + '<td><button type="button" class="ynbtn'+(r.oncall==="○"?" on":"")+'" data-d="'+d+'" data-f="oncall">'+(r.oncall||"—")+"</button></td>"
+      + '<td><input data-d="'+d+'" data-f="oncallNote" value="'+esc(r.oncallNote||"")+'"></td>'
+      + '<td><input data-d="'+d+'" data-f="med" value="'+esc(r.med||"")+'"></td>'
+      + '<td><input data-d="'+d+'" data-f="mealA" value="'+esc(r.mealA||"")+'"></td>'
+      + '<td><input data-d="'+d+'" data-f="mealB" value="'+esc(r.mealB||"")+'"></td>'
+      + '<td><input data-d="'+d+'" data-f="mealC" value="'+esc(r.mealC||"")+'"></td>'
+      + '<td><input data-d="'+d+'" data-f="note" value="'+esc(r.note||"")+'"></td></tr>';
+  }
+  const hasSrc = Object.keys(houseRecs).length || lineMsgs.length;
+  return (hasSrc
+      ? '<div class="banner info">介護記録とLINEからその月の記録を拾います。○×や文言はこの表で直接直せます。記録が無い日は空欄のままで構いません。</div>'
+      : '<div class="banner warn">この画面ではまだファイルを読み込んでいません。上の枠に介護記録PDFとLINEのトーク履歴（.txt）を入れると、表が自動で埋まります。</div>')
+  + '<div class="grid3" style="margin-bottom:14px">'+kinyuField(p, true)+"</div>"
+  + '<div class="narrbar" style="margin-bottom:12px"><button class="btn sm" id="btnScan">記録から読み取る</button>'
+  +   '<span class="hint">この入居者に関係する '+(p.srcLines||0)+"行が対象です"+(sample?"":"／AIの補完は使えません")+"</span></div>"
+  + '<div class="rosterwrap"><table class="dayedit"><thead><tr>'
+  +   "<th>日</th><th>ﾓｰﾆﾝｸﾞ<br>ｺｰﾙ</th><th>様子</th><th>ｵﾝ<br>ｺｰﾙ</th><th>内容</th><th>服薬確認</th><th>朝</th><th>昼</th><th>夕</th><th>特記</th>"
+  + "</tr></thead><tbody>"+rows+"</tbody></table></div>"
+  + '<div style="margin-top:18px">'+narrBlock(p, "1ヶ月のまとめ（任意）", sample ? "Claudeでまとめる" : "記録からまとめを作る")+"</div>"
+  + confirmBar(p);
+}
+function confirmBar(p){
+  return '<div class="narrbar" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
+    + '<button class="btn '+(p.confirmed?"":"primary")+'" id="btnConfirm">'+(p.confirmed?"確定を解除して編集する":"この人の報告書を確定する")+"</button>"
+    + '<button class="btn" id="btnPdfOne">この人だけPDF</button>'
+    + '<button class="btn ghost sm" id="btnPreviewOne">この人だけプレビュー</button>' 
+    + '<label class="hint" style="display:inline-flex;align-items:center;gap:7px;margin-left:14px;cursor:pointer">'
+    +   '<input type="checkbox" id="eExclude"'+(p.exclude?" checked":"")+"> 印刷しない</label></div>";
+}
+function bindCareEditor(p){
+  document.querySelectorAll(".daybtn[data-d]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const d = +b.dataset.d;
+      const st = new Set(p.att||[]);
+      const on = !st.has(d);
+      on ? st.add(d) : st.delete(d);
+      p.att = Array.from(st).sort((a,b)=>a-b);
+      p.attEdited = true;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", String(on));
+      const cnt = document.querySelector("#editorBody .count");
+      if (cnt) cnt.textContent = p.att.length;
+      const rst = document.getElementById("btnResetAtt");
+      if (rst) rst.disabled = false;
+      save(); renderRoster(); renderSheets();
+    });
+  });
+  bindField("eOffice", v=>{ p.cmOffice=v; p.cmOfficeEdited=true; });
+  bindField("eCm",     v=>{ p.cmName=v;   p.cmNameEdited=true; });
+  bindField("eCare",   v=>{ p.care=v;     p.careEdited=true; });
+  bindField("eTeikyo", v=>{ p.teikyo=v;   p.teikyoEdited=true; });
+  bindKinyu(p);
+  const reset = document.getElementById("btnResetAtt");
+  if (reset) reset.addEventListener("click", ()=>{ p.att=(p.attAuto||[]).slice(); p.attEdited=false; save(); renderEditor(); renderRoster(); renderSheets(); });
+}
+function bindHouseEditor(p){
+  bindKinyu(p);
+  const setv = (d,f,v)=>{ const dd = mutableDays(p); dd[d] = { ...(dd[d]||{}), [f]:v }; };
+  document.querySelectorAll(".ynbtn[data-d]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const d=+b.dataset.d, f=b.dataset.f;
+      const cur = ((p.days||{})[d]||{})[f] || "";
+      const next = cur === "" ? "○" : cur === "○" ? "×" : "";
+      setv(d,f,next);
+      b.textContent = next || "—";
+      b.classList.toggle("on", next === "○");
+      save(); renderRoster(); renderSheets();
+    });
+  });
+  document.querySelectorAll("table.dayedit input[data-d]").forEach(el=>{
+    el.addEventListener("input", ()=>{ setv(+el.dataset.d, el.dataset.f, el.value); save(); renderSheets(); });
+    el.addEventListener("blur", renderRoster);
+  });
+  const scan = document.getElementById("btnScan");
+  if (scan) scan.addEventListener("click", ()=>{ scan.disabled = true; scan.textContent = "読み取り中…"; setTimeout(()=>scanHouse(p), 30); });
+}
+function bindCommonEditor(p){
+  const ta = document.getElementById("eNarr");
+  const len = document.getElementById("narrLen");
+  const upd = ()=>{ len.textContent = ta.value.length + "字"; };
+  upd();
+  ta.addEventListener("input", ()=>{ p.narrative = ta.value; upd(); save(); renderSheets(); });
+  ta.addEventListener("blur", renderRoster);
+
+  const ex = document.getElementById("eExclude");
+  ex.addEventListener("change", ()=>{ p.exclude = ex.checked; save(); renderRoster(); renderSheets(); });
+
+  document.getElementById("btnPdfOne").addEventListener("click", async (e)=>{
+    onlyKey = selected;
+    try { await makePdf(e.currentTarget); } finally { onlyKey = null; renderSheets(); }
+  });
+  document.getElementById("btnPreviewOne").addEventListener("click", ()=>{
+    onlyKey = selected; openPreview();
+  });
+  document.getElementById("btnConfirm").addEventListener("click", ()=>{
+    p.confirmed = !p.confirmed; save(); renderEditor(); renderRoster(); renderSheets();
+  });
+
+  const gen = document.getElementById("btnGen");
+  gen.addEventListener("click", ()=>{
+    if (!sample){
+      if (!(p.records||[]).length && mode !== "house"){
+        notify("先に記録を読み込んでください。","warn"); return;
+      }
+      const t = autoNarrative(p);
+      ta.value = t; p.narrative = t;
+      document.getElementById("narrLen").textContent = t.length + "字";
+      save(); renderRoster(); renderSheets();
+      notify("記録から下書きを作りました。内容を確認して直してください。");
+      return;
+    }
+    generateOne(p, gen, ta);
+  });
+}
+function bindField(id, setter){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("input", ()=>{ setter(el.value); save(); renderSheets(); });
+  el.addEventListener("blur", renderRoster);
+}
+
+/* ============================ 記録から文章を作る（AIなしでも動く） ============================ */
+const KW_SKIN = ["発赤","水疱","乾癬","巻き爪","剥離","発疹","掻爬","皮膚","湿疹","褥瘡"];
+const KW_PAIN = ["腰","膝","首","肩","手首","足","股関節","口内炎","巻き爪","つま先","母趾","背中","頭"];
+const KW_TRAIN = ["歩行","ストレッチ","座位","立位","平行棒","体操","口腔","マッサージ"];
+const KW_REC  = ["カラオケ","オセロ","マージャン","七夕","塗り絵","折り紙","動画","ビデオ","パターゴルフ","スクラッチ","歌","俳句","小物作り","ボール","カレンダー","飾り"];
+function recsOfKind(p, re){
+  return (p.records||[]).filter(r=>re.test(r.kind||"")).map(r=>(r.content||"")).filter(Boolean);
+}
+function anyOf(texts, words){
+  const hit = [];
+  for (const w of words) if (texts.some(t=>t.indexOf(w) >= 0)) hit.push(w);
+  return hit;
+}
+function autoNarrative(p){
+  const {y,m} = ymParts(ym);
+  const reiwa = y - 2018;
+  const sei = surname(p.name||"");
+  const n = (p.att||[]).length;
+  const all = (p.records||[]).map(r=>String(r.content||"").replace(/麻雀/g,"マージャン"));
+  const out = [];
+
+  if (mode === "house"){
+    const days = p.days || {};
+    const ks = Object.keys(days).map(Number).filter(d=>d).sort((a,b)=>a-b);
+    const mo = ks.filter(k=>days[k].morning === "○").length;
+    const ocDays = ks.filter(k=>days[k].oncall === "○");
+    const medDays = ks.filter(k=>(days[k].med||"").trim());
+    const medTexts = medDays.map(k=>days[k].med);
+    const meals = ks.map(k=>[days[k].mealA,days[k].mealB,days[k].mealC].filter(Boolean).join(" ")).filter(Boolean);
+    const notes = ks.map(k=>({ d:k, t:(days[k].note||"").trim() })).filter(x=>x.t);
+    const hasAny = (re)=>medTexts.some(t=>re.test(t)) || notes.some(x=>re.test(x.t));
+
+    out.push("令和"+reiwa+"年"+m+"月の"+sei+"様のご様子です。");
+    if (mo) out.push("モーニングコールは"+mo+"日実施し、応答や表情を確認しています。");
+    out.push(ocDays.length
+      ? "オンコールの対応が"+ocDays.length+"日（"+ocDays.slice(0,6).join("・")+"日）ありました。"
+      : "オンコールの呼び出しはありませんでした。");
+
+    if (medDays.length){
+      out.push("服薬確認は"+medDays.length+"日行っています。");
+      const f = [];
+      if (hasAny(/一包化|空袋|空き袋|袋を見せ|サイン/)) f.push("一包化されたお薬の空き袋やサインで服薬の有無を確認しています");
+      if (hasAny(/飲み残|残薬|内服せず|服薬もされて|飲んでいない|未服薬/)) f.push("飲み残しがみられる日があり、朝夕の声かけと確認を強めています");
+      if (hasAny(/ゼリー|アイス|ご飯の上|とろみ|飲み込み|嚥下/)) f.push("飲み込みに時間がかかるため、ゼリーやアイスなどを利用して内服していただいています");
+      if (hasAny(/軟膏|塗布|外用|貼付/)) f.push("皮膚の状態に合わせて外用薬の塗布を継続しています");
+      if (hasAny(/追加|変更|処方|お薬手帳/)) f.push("処方の追加・変更があり、内容を確認したうえで対応しています");
+      if (hasAny(/デイ|持参/)) f.push("デイサービス利用日はお薬を持参し、施設でも服薬を確認しています");
+      if (f.length) out.push(f.slice(0,4).join("。")+"。");
+    }
+
+    if (meals.length) out.push("食事は"+(meals.filter(t=>/完食/.test(t)).length >= meals.length/2 ? "概ね良好に召し上がっています" : "体調やご希望に合わせて召し上がっています")+"。");
+
+    if (notes.length){
+      const fam = notes.find(x=>/ご家族|家族|お兄|お姉|息子|娘|面会|来訪|来られ|お嫁|ご主人|奥様/.test(x.t));
+      if (fam) out.push("ご家族については、"+fam.d+"日に"+clip(fam.t,44)+"。");
+      const plan = notes.find(x=>x!==fam && /受診|往診|訪問診療|訪問看護|歯科|通院|予定|外出|外泊|退院|入院|認定|担当者会議/.test(x.t));
+      if (plan) out.push("受診・ご予定では、"+plan.d+"日に"+clip(plan.t,44)+"。");
+      const want = notes.find(x=>x!==fam && x!==plan && /希望|要望|依頼|注文|購入|買っ/.test(x.t));
+      if (want) out.push("ご本人のご希望として、"+want.d+"日に"+clip(want.t,40)+"。");
+      const etc = notes.find(x=>x!==fam && x!==plan && x!==want);
+      if (etc) out.push("そのほか"+etc.d+"日に"+clip(etc.t,40)+"などがありました。");
+    }
+    out.push("全体を通して落ち着いてお過ごしです。");
+    return out.join("").replace(/。。/g,"。").slice(0,700);
+  }
+
+  if (mode === "visit"){
+    out.push("令和"+reiwa+"年"+m+"月、"+sei+"様のお宅へ"+n+"回訪問させていただきました。");
+    const parsed = (p.records||[]).map(r=>{
+      const mm = String(r.content||"").split("／").map(s=>tidyJa(s));
+      return { day:r.day, svc:mm[0]||"", items:mm[1]||"", note:mm.slice(2).join(" ").trim() };
+    });
+    const itemsRaw = parsed.map(r=>r.items).join("/");
+    const items = norm(itemsRaw);
+    const VCAT = [["清掃(居室)","居室の掃除"],["清掃(トイレ)","トイレの掃除"],["清掃(浴室)","浴室の掃除"],["清掃(台所)","台所の掃除"],
+                  ["日常品等買物","日用品の買い物"],["買物","買い物"],["調理","調理"],["配下膳","配下膳"],["ゴミ出し","ゴミ出し"],
+                  ["洗濯","洗濯"],["乾燥","物干し"],["シーツ","シーツ交換"],["整理","整理整頓"],
+                  ["服薬","服薬の介助・確認"],["入浴","入浴の介助"],["清拭","清拭"],["排泄","排泄の介助"],["更衣","更衣の介助"],
+                  ["通院","通院の介助"],["移動","移動の介助"],["見守り","見守り"]];
+    const hits = [];
+    let rest = items;
+    VCAT.forEach(function(c){
+      const k = norm(c[0]);
+      if (rest.indexOf(k) < 0) return;
+      rest = rest.split(k).join("");
+      if (hits.indexOf(c[1]) < 0) hits.push(c[1]);
+    });
+    if (hits.length) out.push("訪問時は"+hits.slice(0,6).join("・")+"を中心に支援を行っています。");
+    if (items.indexOf("共に行う") >= 0) out.push("できることはご本人と一緒に行い、生活動作の維持につながるよう支援しています。");
+    if (/顔色|発汗/.test(items)) out.push("訪問のたびに顔色や発汗の有無を確認し、体調にお変わりがないかを見ています。");
+
+    const notes = parsed.filter(r=>r.note && r.note.length > 8);
+    const pick = notes.slice().sort((a,b)=>b.note.length - a.note.length).slice(0,3).sort((a,b)=>a.day - b.day);
+    pick.forEach(function(r){
+      const t = takeSentences(r.note, 62);
+      if (t) out.push(r.day+"日は"+t+"。");
+    });
+    if (/受診|通院|退院|入院|往診/.test(itemsRaw + notes.map(r=>r.note).join(""))) out.push("受診や通院のご予定も確認しながら対応しています。");
+    out.push("お体の状態に大きな変化はなく、落ち着いてお過ごしです。今後もご本人のご希望を伺いながら支援を続けてまいります。");
+    return trimTail(out.join("").replace(/。。/g,"。"), 480);
+  }
+
+  out.push("令和"+reiwa+"年"+m+"月、"+sei+"様は"+n+"回ご利用いただきました。");
+
+  const bath = recsOfKind(p, /入浴/);
+  if (bath.length){
+    let how = "一般浴で";
+    if (bath.some(t=>t.indexOf("手前") >= 0)) how = "ご本人に合った浴槽を選び";
+    else if (bath.some(t=>/バスボード|シャワーチェア/.test(t))) how = "バスボード等を用いて";
+    else if (bath.some(t=>t.indexOf("短浴") >= 0)) how = "体調に合わせて";
+    out.push("入浴は"+how+"安全に実施しています。");
+  }
+  const care = recsOfKind(p, /処置/);
+  if (care.length){
+    const k = anyOf(care, KW_SKIN);
+    out.push(k.length ? k.slice(0,3).join("・")+"に対し塗布や保護などの処置を継続し、看護師が対応しています。"
+                      : "必要に応じて処置を行い、看護師が対応しています。");
+  }
+  const pains = anyOf(all.filter(t=>t.indexOf("痛") >= 0), KW_PAIN);
+  if (pains.length) out.push(pains.slice(0,3).join("・")+"の痛みの訴えがあり、状態を確認しています。");
+  const tr = recsOfKind(p, /機能訓練|リハビリ/);
+  if (tr.length){
+    const k = anyOf(tr, KW_TRAIN);
+    out.push("機能訓練では"+(k.length ? k.slice(0,3).join("・") : "体操やストレッチ")+"を中心に実施し、"
+      + (tr.some(t=>t.indexOf("安定") >= 0) ? "歩行は安定しています" : "機能の維持に取り組んでいます")+"。");
+  }
+  const meal = recsOfKind(p, /食事/);
+  if (meal.length) out.push(meal.filter(t=>t.indexOf("完食") >= 0).length >= 2
+    ? "食事は概ね良好に召し上がっています。" : "食事は体調に合わせて召し上がっています。");
+  const vit = recsOfKind(p, /バイタル/);
+  if (vit.length) out.push("毎回、体温・血圧・脈拍などのバイタルを測定し、体調を確認しています。");
+  const med2 = all.filter(t=>/服薬|内服|お薬/.test(t));
+  if (med2.length){
+    out.push(/ゼリー|アイス|ご飯の上|とろみ|飲み込み|嚥下|飲み残/.test(med2.join(""))
+      ? "服薬は飲み込みの状態に合わせてゼリー等を利用しながら確認しています。"
+      : "服薬の確認を行い、必要に応じて声かけをしています。");
+  }
+  const exc = recsOfKind(p, /排泄/);
+  if (exc.length && /硬め|便秘|失禁|下痢/.test(exc.join(""))) out.push("排泄の状況にも変化がないか確認しています。");
+  const rec = recsOfKind(p, /レク|ケース/);
+  const acts = anyOf(rec, KW_REC);
+  out.push(acts.length ? "レクリエーションでは"+acts.slice(0,4).join("・")+"などを楽しまれ、他のご利用者様とも和やかに過ごされています。"
+                       : "穏やかに過ごされています。");
+  const notes3 = (p.records||[])
+    .filter(r=>/特記|ケース|モニタリング/.test(r.kind||"") || /【特記】/.test(r.content||""))
+    .map(r=>({ day:r.day, t: stripFields(String(r.content||"")) }))
+    .filter(x=>x.t.length > 12);
+  const pick3 = notes3.slice().sort((a,b)=>b.t.length - a.t.length).slice(0,2).sort((a,b)=>a.day - b.day);
+  const extra = [];
+  pick3.forEach(function(r){
+    const t = takeSentences(r.t, 56);
+    if (t) extra.push(r.day+"日には"+t+"。");
+  });
+  const tail = [];
+  if (all.some(t=>/ご家族|お兄|お姉|息子|娘|面会|来訪/.test(t))) tail.push("ご家族との連絡事項についても、その都度共有させていただいています。");
+  tail.push("今後も安全に配慮しながら、ご本人のペースに合わせて支援してまいります。");
+  while (extra.length && (out.join("")+extra.join("")+tail.join("")).length > 470) extra.pop();
+  const body = out.concat(extra, tail).join("").replace(/。。/g,"。");
+  return trimTail(body, 480);
+}
+
+/* ============================ Claude ============================ */
+function wireGenAll(){
+  const ga = document.getElementById("btnGenAll");
+  if (!ga || ga.dataset.wired) return;
+  ga.dataset.wired = "1";
+  ga.hidden = false;
+  ga.addEventListener("click", e=>arm(e.currentTarget, "未作成の方をまとめて下書きします。", ()=>generateAll(ga)));
+}
+function aiUnavailable(e){
+  const c = e && e.code;
+  return c === "not_granted" || c === "capability_disabled" || c === "capability_removed";
+}
+function genError(e){
+  const code = e && e.code;
+  return code === "rate_limited" ? "混み合っています。少し待ってからもう一度お試しください。"
+       : code === "not_granted"  ? "この画面ではAIを使えません。"
+       : code === "invalid_json" ? "AIの返答を読み取れませんでした。もう一度お試しください。"
+       : ("処理できませんでした（" + (code || (e && e.message) || "不明") + "）。もう一度お試しください。");
+}
+async function generate(p, onDelta){
+  const {y,m} = ymParts(ym);
+  const reiwa = y - 2018;
+  const sei = (p.name||"").split(/[ 　]/)[0];
+  const n = (p.att||[]).length;
+  const digest = p.digest || digestOf(p.records);
+  let system, user;
+  if (mode === "house"){
+    system = "あなたはサービス付き高齢者向け住宅の生活相談員です。1ヶ月の記録をもとに、施設内で保管する生活記録のまとめ文を作成します。条件：日本語の丁寧な敬体／250〜330字／記録に書かれている事実のみを用い、推測や創作はしない／モーニングコールとオンコールの対応状況、服薬の状況、食事の様子、体調や生活の様子を自然な一続きの文章にまとめる／箇条書きは使わない／入居者名は『"+sei+"様』と表記する。説明や前置きを書かず、本文だけを返してください。";
+    user = "入居者："+p.name+"様\n対象期間：令和"+reiwa+"年"+m+"月\n以下は当月の記録です。\n\n"+([houseDigest(p), digest].filter(Boolean).join("\n\n"));
+  } else {
+    const label = mode === "visit" ? "訪問介護" : "通所介護";
+    system = "あなたは"+label+"の相談員です。記録をもとに、担当ケアマネジャー宛の『"+cfg().reportTitle+"』の『様子及び提供時の状況』欄に載せる文章を作成します。条件：日本語の丁寧な敬体（です・ます調）／全体で300字程度（250〜330字）／記録に書かれている事実のみを用い、推測や創作はしない／"+(mode==="visit"?"実施したサービスの内容、生活の様子、体調、特記事項":"入浴・処置・機能訓練・体調や痛み・食事・レクリエーション・全体の様子")+"を、自然な一続きの文章にまとめる／箇条書きや見出しは使わない／利用者名は『"+sei+"様』と表記する。説明や前置きを書かず、本文だけを返してください。";
+    user = "利用者："+p.name+"様\n対象期間：令和"+reiwa+"年"+m+"月（"+(mode==="visit"?"訪問":"通所")+"回数 "+n+"回）\n以下は当月の記録です。\n\n"+digest
+      + "\n\nこの記録から様子文を書いてください。文頭は必ず『令和"+reiwa+"年"+m+"月、"+sei+"様は"+n+"回ご利用いただきました。』で始めてください。";
+  }
+  const res = await sample([{role:"user", content: system + "\n\n---\n\n" + user}], {
+    modelTier:"default",
+    onText: onDelta ? ({text}) => onDelta(text) : undefined
+  });
+  p.narrative = (res.text||"").trim();
+  return p.narrative;
+}
+function houseDigest(p){
+  const {y,m} = ymParts(ym);
+  const last = lastDay(y,m);
+  const out = [];
+  for (let d=1; d<=last; d++){
+    const r = (p.days||{})[d]; if (!r) continue;
+    const parts = [];
+    if (r.morning) parts.push("モーニングコール"+r.morning+(r.morningNote?"（"+r.morningNote+"）":""));
+    if (r.oncall)  parts.push("オンコール"+r.oncall+(r.oncallNote?"（"+r.oncallNote+"）":""));
+    if (r.med)     parts.push("服薬："+r.med);
+    if (r.mealA)   parts.push("朝："+r.mealA);
+    if (r.mealB)   parts.push("昼："+r.mealB);
+    if (r.mealC)   parts.push("夕："+r.mealC);
+    if (r.note)    parts.push(r.note);
+    if (parts.length) out.push(m+"/"+d+" "+parts.join(" / "));
+  }
+  return out.join("\n");
+}
+async function generateOne(p, btn, ta){
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "作成中…";
+  try {
+    await generate(p, t=>{ ta.value = t; });
+    ta.value = p.narrative;
+    const l1 = document.getElementById("narrLen"); if (l1) l1.textContent = ta.value.length + "字";
+    save(); renderRoster(); renderSheets();
+  } catch(e){
+    if (aiUnavailable(e)){
+      sample = null;
+      p.narrative = autoNarrative(p);
+      ta.value = p.narrative;
+      const l2 = document.getElementById("narrLen"); if (l2) l2.textContent = p.narrative.length + "字";
+      save(); renderEditor(); renderRoster(); renderSheets();
+      notify("AIが使えないため、記録から文章を作りました。内容を確認して直してください。");
+    } else notify(genError(e), "err");
+  }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+async function generateAll(btn){
+  const keys = sortedKeys().filter(k=>{
+    const p = people[k];
+    if (p.exclude || p.confirmed || (p.narrative||"").trim()) return false;
+    return mode === "house" ? true : (p.att||[]).length > 0;
+  });
+  if (!keys.length){ notify("下書きが必要な方はいません。","warn"); return; }
+  btn.disabled = true; const old = btn.textContent;
+  for (let i=0;i<keys.length;i++){
+    const p = people[keys[i]];
+    btn.textContent = "作成中… " + (i+1) + "/" + keys.length + "（" + p.name + "）";
+    try {
+      if (sample) await generate(p);
+      else p.narrative = autoNarrative(p);
+    } catch(e){
+      if (aiUnavailable(e)){ sample = null; p.narrative = autoNarrative(p); notify("AIが使えないため、記録から作成に切り替えました。"); }
+      else { notify(genError(e) + "（" + p.name + "様で中断しました）", "err"); break; }
+    }
+    save(); renderRoster();
+  }
+  btn.textContent = old; btn.disabled = false;
+  renderAll();
+}
+function dayBuckets(p, y, m){
+  const byDay = {};
+  const push = (d, t, general, kind)=>{ if (!d || !t) return; (byDay[d] = byDay[d] || []).push({ t:String(t).replace(/\s+/g," ").trim(), g:general, k:kind||"" }); };
+  const own = houseRecs[norm(p.name)];
+  if (own) own.records.forEach(r=>{ if (inMonth(r,y,m)) push(r.day, r.content, false, r.kind); });
+  const lg = houseRecs[norm(set("logUser"))];
+  if (lg) lg.records.forEach(r=>{ if (inMonth(r,y,m)) push(r.day, (r.kind||"")+" "+(r.content||""), true, r.kind); });
+  lineMsgs.forEach(g=>{ if (g.y===y && g.m===m) push(g.d, g.text, true, "LINE"); });
+  return byDay;
+}
+function tidyJa(x){
+  let t = String(x||"").replace(/\s+/g," ");
+  const re = /([\u3040-\u30ff\u4e00-\u9fff々、。・）」])\s+([\u3040-\u30ff\u4e00-\u9fff々、。・）」（「])/g;
+  for (let i=0;i<3;i++) t = t.replace(re, "$1$2");
+  return t.trim();
+}
+function clip(x, n){
+  let t = tidyJa(x);
+  t = t.replace(/^【[^】]{0,14}】\s*/,"").replace(/^[A-Za-z][A-Za-z0-9_.\-]{1,15}\s+/,"").replace(/^[、。・\/\s]+/,"");
+  return t.trim().slice(0, n);
+}
+function sentences(t){
+  return String(t||"").split(/[。！？\n]|【|】|\s\/\s/).map(x=>x.trim()).filter(x=>x.length>1);
+}
+function pickSentence(t, re, cap){
+  for (const sen of sentences(t)) if (re.test(sen)) return clip(sen, cap||28);
+  return "";
+}
+function pickAll(t, re, cap, max){
+  const out = [];
+  for (const sen of sentences(t)){
+    if (!re.test(sen)) continue;
+    const c = clip(sen, cap||30);
+    if (c && out.indexOf(c) < 0) out.push(c);
+    if (out.length >= (max||2)) break;
+  }
+  return out.join("／");
+}
+function joinFrag(cur, add, cap){
+  if (!add) return cur || "";
+  const parts = cur ? cur.split("／").filter(Boolean) : [];
+  add.split("／").forEach(a=>{
+    if (!a) return;
+    if (parts.some(p=>p.indexOf(a) >= 0 || a.indexOf(p) >= 0)) return;
+    parts.push(a);
+  });
+  let s = parts.join("／");
+  if (s.length > cap) s = s.slice(0, cap);
+  return s;
+}
+const POLITE_DONE = /(ます|ました|ません|でした|です|ください|いただきました|おります|でしょう)$/;
+const POLITE = [
+  [/と言っていた$/,"とお話しされていました"],[/と話していた$/,"とお話しされていました"],
+  [/と言う$/,"とのことでした"],[/と言った$/,"とお話しされていました"],
+  [/見られる$/,"見られました"],[/見られた$/,"見られました"],
+  [/行った$/,"行いました"],[/行う$/,"行いました"],[/行く$/,"行きました"],
+  [/ている$/,"ていました"],[/ていた$/,"ていました"],
+  [/られる$/,"られました"],[/られた$/,"られました"],
+  [/あった$/,"ありました"],[/ある$/,"ありました"],
+  [/いた$/,"いました"],[/いる$/,"いました"],
+  [/だった$/,"でした"],[/した$/,"しました"],[/する$/,"しました"],
+  [/なった$/,"なりました"],[/なる$/,"なりました"],
+  [/来た$/,"来られました"],[/来る$/,"来られました"],
+  [/使う$/,"使いました"],[/出す$/,"出しました"],[/言う$/,"とのことでした"]
+];
+function stripFields(t){
+  let s = tidyJa(t).replace(/【[^】]{0,14}】/g,"");
+  for (let i=0;i<8;i++){
+    const m = s.match(/^[^、。：:]{1,10}[：:][^、。]{0,8}、/);
+    if (!m) break;
+    s = s.slice(m[0].length);
+  }
+  s = s.replace(/^[^、。：:]{1,10}[：:]/,"");
+  s = s.replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g,"");
+  s = s.replace(/^(モニタリング|ケース記録|ケース|特記事項|特記)/,"");
+  s = s.replace(/^[○×〇・、,\s]+/,"");
+  return s.trim();
+}
+function trimTail(t, cap){
+  if (t.length <= cap) return t;
+  const s = t.slice(0, cap), i = s.lastIndexOf("。");
+  return i > cap*0.4 ? s.slice(0, i+1) : s;
+}
+function politeSentence(s){
+  const t = String(s||"").trim();
+  if (!t || POLITE_DONE.test(t)) return t;
+  for (let i=0;i<POLITE.length;i++) if (POLITE[i][0].test(t)) return t.replace(POLITE[i][0], POLITE[i][1]);
+  return t;
+}
+function takeSentences(t, cap){
+  const ss = sentences(t).map(politeSentence).filter(Boolean);
+  let s = "";
+  for (let i=0;i<ss.length;i++){
+    const nx = s ? s+"。"+ss[i] : ss[i];
+    if (nx.length > cap) break;
+    s = nx;
+  }
+  if (!s) s = clip(ss[0] || t, cap);
+  return s.replace(/[、,。]$/,"");
+}
+function mutableDays(p){
+  if (!p.days || typeof p.days !== "object" || Object.isFrozen(p.days) || !Object.isExtensible(p.days)){
+    try { p.days = JSON.parse(JSON.stringify(p.days || {})); } catch(e){ p.days = {}; }
+  }
+  for (const d in p.days){
+    const r = p.days[d];
+    if (r && r.meal && !r.mealB){ p.days[d] = { ...r, mealB:r.meal, meal:"" }; }
+  }
+  return p.days;
+}
+function dayHas(r){
+  return !!(r && (r.morning||r.oncall||r.morningNote||r.oncallNote||r.med||r.mealA||r.mealB||r.mealC||r.note||r.meal));
+}
+function bucketsFromDigest(p){
+  const by = {};
+  (p.digest||"").split("\n").forEach(l=>{
+    const m = l.match(/^(\d{1,2})\/(\d{1,2})\s+(.+)$/);
+    if (!m) return;
+    const d = +m[2];
+    if (!d) return;
+    (by[d] = by[d] || []).push({ t: m[3].replace(/\s+/g," ").trim(), g:true, k:"" });
+  });
+  return by;
+}
+function scanRules(p){
+  const {y,m} = ymParts(ym);
+  const sn = surname(p.name);
+  let byDay = dayBuckets(p, y, m);
+  if (!Object.keys(byDay).length) byDay = bucketsFromDigest(p);
+  const last = lastDay(y,m);
+  let hit = 0;
+  mutableDays(p);
+  for (const key in byDay){
+    const d = +key;
+    if (!d || d > last) continue;
+    const cur = p.days[d] || {};
+    const out = { morning:cur.morning||"", morningNote:cur.morningNote||"", oncall:cur.oncall||"", oncallNote:cur.oncallNote||"",
+                  med:cur.med||"", mealA:cur.mealA||"", mealB:cur.mealB||"", mealC:cur.mealC||"", note:cur.note||"" };
+    for (const it of byDay[d]){
+      const t = it.t;
+      // オンコール
+      if (!out.oncall){
+        const oc = t.match(/オンコール[^0-9０-９]{0,14}([0-9０-９]+)\s*件/);
+        if (oc) out.oncall = (parseInt(nfkc(oc[1]),10) > 0) ? "○" : "×";
+        else if (/オンコール(対応|あり|出動|呼び出しあり)/.test(t)) out.oncall = "○";
+      }
+      if (out.oncall === "○" && !out.oncallNote){
+        out.oncallNote = pickSentence(t, /オンコール/, 34);
+      }
+      // モーニングコール
+      if (/モーニングコール/.test(t)){
+        if (!out.morning && (t.indexOf(sn) >= 0 || /名とも|全員|異常なし|終わりました|終了/.test(t))) out.morning = "○";
+        if (!out.morningNote){
+          const sens = sentences(t).filter(x=>/モーニングコール/.test(x) || x.indexOf(sn) >= 0);
+          const own = sens.find(x=>x.indexOf(sn) >= 0) || sens[0];
+          if (own) out.morningNote = clip(own.replace(/^.*?モーニングコール(の様子|時)?[：:、]?/,""), 34) || clip(own, 34);
+        }
+      }
+      const mine = !it.g || t.indexOf(sn) >= 0;
+      if (!mine) continue;
+      // 食事（朝・昼・夕）
+      if (!out.mealA) out.mealA = pickSentence(t, /朝食|朝ご飯|朝ごはん|朝食後/, 22);
+      if (!out.mealC) out.mealC = pickSentence(t, /夕食|夕飯|夕ご飯|夕ごはん|夜ご飯/, 22);
+      if (!out.mealB){
+        if (/^食事|^おやつ/.test(it.k)) out.mealB = clip(t, 24);
+        else out.mealB = pickSentence(t, /昼食|お昼|昼ご飯|昼ごはん|完食|召し上が/, 22);
+      }
+      if (!out.med || out.med.length < 44){
+        out.med = joinFrag(out.med, pickAll(t, /服薬|内服|お薬|薬を|薬は|薬が|投薬|一包化|空袋|空き袋|飲み残|残薬|軟膏|塗布|外用|貼付|処方|お薬手帳/, 30, 3), 72);
+      }
+      if (!out.note || out.note.length < 64){
+        const NOTE_RE = [
+          /ご家族|家族|ご主人|奥様|息子|娘|お兄|お姉|面会|来訪|来られ|お嫁|ご兄弟/,
+          /予定|外出|外泊|受診|通院|往診|訪問診療|訪問看護|歯科|リハビリ|引っ越し|退院|入院|認定|担当者会議|ケアマネ/,
+          /要望|希望|依頼|申し出|注文|購入|買っ|持参|準備/,
+          /痛|発熱|転倒|体調|不眠|眠れ|発赤|水疱|湿疹|皮膚|爪|むくみ/
+        ];
+        for (const re of NOTE_RE){
+          out.note = joinFrag(out.note, pickAll(t, re, 44, 1), 110);
+          if (out.note.length >= 64) break;
+        }
+      }
+    }
+    let changed = false;
+    for (const f in out) if (out[f] !== (cur[f]||"")) changed = true;
+    if (changed){ p.days[d] = out; hit++; }
+  }
+  return hit;
+}
+async function scanHouse(p){
+  if (scanAbort){ try { scanAbort.abort(); } catch(e){} scanAbort = null; return; }
+  const {y,m} = ymParts(ym);
+  let n = 0, src = "";
+  try {
+    src = houseSource(p.name, y, m) || (p.digest || "");
+    if (src) n = scanRules(p);
+    save();
+  } catch(e){
+    notify("読み取りでエラーが起きました：" + ((e && e.message) || e), "err");
+  }
+  renderEditor(); renderRoster(); renderSheets();
+
+  const already = Object.keys(p.days||{}).filter(k=>dayHas(p.days[k])).length;
+  if (!src || (!n && !already)){
+    notify("読み取れる記録が見つかりませんでした。上の枠に介護記録PDFとLINEのトーク履歴（.txt）をもう一度入れてください。入れた時点で表が埋まります。","warn");
+    if (!src) return;
+  } else if (!n){
+    notify("すでに" + already + "日分が入っています。新しく増える項目はありませんでした。");
+  }
+  if (!sample){
+    if (n) notify(n + "日分を記録から読み取りました。この画面ではAIの補完は使えません。");
+    return;
+  }
+  notify("記録から " + n + "日分を入れました。続けてAIが空欄を補います。");
+
+  const btn = document.getElementById("btnScan");
+  const old = btn ? btn.textContent : "記録から読み取る";
+  if (btn){ btn.disabled = false; btn.textContent = "AI補完を中止"; }
+  scanAbort = new AbortController();
+  const timer = setTimeout(()=>{ try { scanAbort && scanAbort.abort(); } catch(e){} }, 100000);
+  try {
+    const prompt = "以下はサービス付き高齢者向け住宅アロハハウスの"+y+"年"+m+"月の記録です。介護記録（本人分とハウス日誌）と職員LINEが含まれます。入居者「"+p.name+"」様について、日ごとに次の4点を抜き出してください。\n"
+      + "morning: モーニングコールを実施した記述があれば「○」、実施しなかった／不要と明記されていれば「×」、記述がなければ空文字\n"
+      + "oncall: オンコール対応の記述があれば「○」、呼び出し0件と明記されていれば「×」、記述がなければ空文字\n"
+      + "med: 服薬に関する記述（服薬済み・声かけ・飲み残し・一包化の空袋確認・ゼリーやアイスの利用・外用薬の塗布・処方の追加や変更など）を60字以内で。複数あれば「／」でつないで全て書く。無ければ空文字\n"
+      + "meal: 食事量や摂取状況の記述（完食、半分、朝食のみ等）を20字以内で。無ければ空文字\n"
+      + "note: その他この入居者ご本人に関することを100字以内で。ご家族の来訪や連絡、受診・往診・通院の予定、ご本人のご希望や要望、体調や痛み、皮膚の状態などを、記録にある分だけ「／」でつないで書く。無ければ空文字\n\n"
+      + "厳守：記録に書かれていることだけを使い、推測や創作はしないこと。記述が無い日は行ごと省いてよい。dayはその月の日にち（1〜"+lastDay(y,m)+"）の整数。\n\n"
+      + '返答はJSONだけにしてください。形式は {"days":[{"day":1,"morning":"○","oncall":"","med":"朝食後服薬済み","meal":"完食","note":""}]} です。\n\n'
+      + "--- 記録 ---\n" + src;
+    const out = await sample.json(prompt, {
+      modelTier:"default",
+      signal: scanAbort.signal,
+      onText: ({text})=>{ const bb = document.getElementById("btnScan"); if (bb) bb.textContent = "AI補完中 " + text.length + "字（押すと中止）"; }
+    });
+    const days = (out && out.days) || [];
+    let filled = 0;
+    mutableDays(p);
+    for (const r of days){
+      const d = r.day;
+      if (!d || d < 1 || d > lastDay(y,m)) continue;
+      const prev = p.days[d] || {};
+      p.days[d] = {
+        morning: prev.morning || (r.morning||""),
+        oncall:  prev.oncall  || (r.oncall||""),
+        med:     prev.med     || (r.med||""),
+        meal:    prev.meal    || (r.meal||""),
+        note:    prev.note    || (r.note||"")
+      };
+      filled++;
+    }
+    save();
+    notify("AIの補完が終わりました（" + filled + "日分）。");
+  } catch(e){
+    const code = e && e.code;
+    if (code === "cancelled") notify("AIの補完を止めました。記録から拾った分はそのまま入っています。");
+    else if (aiUnavailable(e)){ sample = null; notify("AIは使えないため、記録から拾った分をそのまま使います（"+n+"日分）。"); }
+    else notify(genError(e) + "\n記録から拾った分はそのまま入っています。", "err");
+  } finally {
+    clearTimeout(timer);
+    scanAbort = null;
+    renderEditor(); renderRoster(); renderSheets();
+    const b3 = document.getElementById("btnScan");
+    if (b3){ b3.disabled = false; b3.textContent = old; }
+  }
+}
+
+/* ============================ 印刷用シート ============================ */
+function reportDateText(){
+  const rd = set("reportDate");
+  if (rd){ const [Y,M,D] = rd.split("-").map(Number); return Y+"年"+M+"月"+D+"日"; }
+  const {y,m} = ymParts(ym);
+  return y+"年"+m+"月"+lastDay(y,m)+"日";
+}
+let onlyKey = null;
+function renderSheets(){
+  const {y,m} = ymParts(ym);
+  const scope = document.getElementById("printScope").value;
+  const host = document.getElementById("sheets");
+  const out = [];
+  for (const k of sortedKeys()){
+    const p = people[k];
+    if (onlyKey){ if (k !== onlyKey) continue; }
+    else {
+      if (p.exclude) continue;
+      if (scope === "done" && !p.confirmed) continue;
+      if (scope === "pick" && !p.pick) continue;
+    }
+    out.push(mode === "house" ? houseSheet(p,y,m) : careSheet(p,y,m));
+  }
+  host.innerHTML = out.join("");
+}
+function careSheet(p,y,m){
+  const att = new Set(p.att||[]);
+  let cal = '<table class="rp-cal"><thead><tr>'+WD.map(w=>"<th>"+w+"</th>").join("")+"</tr></thead><tbody>";
+  for (const w of weeksOf(y,m)){
+    cal += "<tr>";
+    for (const d of w) cal += "<td>"+(d ? d+(att.has(d)?'<span class="o">○</span>':"") : "")+"</td>";
+    cal += "</tr>";
+  }
+  cal += "</tbody></table>";
+  return '<section class="sheet">'
+    + '<h1 class="rp-title">'+esc(cfg().reportTitle)+"</h1>"
+    + '<div class="rp-date"><span>報告年月日</span><span>'+esc(reportDateText())+"</span></div>"
+    + '<div class="rp-cm-office">'+esc(p.cmOffice||"")+"</div>"
+    + '<div class="rp-cm-name">'+esc(p.cmName||"")+" 様</div>"
+    + '<table class="rp"><colgroup>'+'<col style="width:14.3%">'.repeat(7)+"</colgroup><tbody>"
+    +   '<tr><td class="lbl">氏名</td><td colspan="2">'+esc(p.name)+' 様</td><td class="blank" colspan="2"></td><td class="ctr" colspan="2">'+esc(set("office"))+"</td></tr>"
+    +   '<tr><td class="lbl">要介護度</td><td colspan="2">'+esc(p.care||"")+'</td><td class="blank" colspan="2"></td><td class="lbl">管理者</td><td>'+esc(set("kanri"))+"</td></tr>"
+    +   '<tr><td class="blank" colspan="5"></td><td class="lbl">記入者</td><td>'+esc(p.kinyu || set("kinyu"))+"</td></tr>"
+    + "</tbody></table>"
+    + '<div class="rp-band">サービス提供の実施状況</div>'
+    + '<div class="rp-sub">'+y+"年"+m+"月　"+(mode==="visit"?"訪問":"通所")+"回数 "+att.size+" 回"+(p.teikyo?"（"+esc(p.teikyo)+"）":"")+"</div>"
+    + cal
+    + '<div class="rp-band">様子及び提供時の状況</div>'
+    + '<div class="rp-narr">'+esc(p.narrative||"")+"</div>"
+    + "</section>";
+}
+function houseSheet(p,y,m){
+  const last = lastDay(y,m);
+  let rows = "";
+  for (let d=1; d<=last; d++){
+    const r = (p.days||{})[d] || {};
+    const dow = dowOf(y,m,d);
+    const cls = dow===5 ? ' class="sat"' : dow===6 ? ' class="sun"' : "";
+    const mo = (r.morning||"") + (r.morningNote ? (r.morning?" ":"")+r.morningNote : "");
+    const oc = (r.oncall||"") + (r.oncallNote ? (r.oncall?" ":"")+r.oncallNote : "");
+    rows += "<tr"+cls+"><td class=\"c\">"+d+"("+WD[dow]+")</td>"
+      + "<td>"+esc(mo)+"</td><td>"+esc(oc)+"</td><td>"+esc(r.med||"")+"</td>"
+      + "<td>"+esc(r.mealA||"")+"</td><td>"+esc(r.mealB||"")+"</td><td>"+esc(r.mealC||"")+"</td>"
+      + "<td>"+esc(r.note||"")+"</td></tr>";
+  }
+  return '<section class="sheet">'
+    + '<h1 class="rp-title">'+esc(cfg().reportTitle)+"</h1>"
+    + '<div class="rp-date"><span>'+y+"年"+m+"月分</span><span>"+esc(set("office"))+"</span><span>記入者 "+esc(p.kinyu || set("kinyu"))+"</span></div>"
+    + '<table class="rp"><colgroup><col style="width:14.3%"><col style="width:42.8%"><col style="width:14.3%"><col style="width:28.6%"></colgroup><tbody>'
+    +   '<tr><td class="lbl">入居者</td><td>'+esc(p.name)+' 様</td><td class="lbl">管理者</td><td>'+esc(set("kanri"))+"</td></tr>"
+    + "</tbody></table>"
+    + '<div class="rp-band">日々の記録</div>'
+    + '<table class="rp-log"><colgroup><col style="width:7%"><col style="width:16%"><col style="width:10%"><col style="width:17%"><col style="width:9%"><col style="width:10%"><col style="width:9%"><col style="width:22%"></colgroup>'
+    +   '<thead><tr><th>日</th><th>ﾓｰﾆﾝｸﾞｺｰﾙ</th><th>ｵﾝｺｰﾙ</th><th>服薬確認</th><th>朝</th><th>昼</th><th>夕</th><th>特記</th></tr></thead>'
+    +   "<tbody>"+rows+"</tbody></table>"
+    + (p.narrative ? '<div class="rp-band">1ヶ月のまとめ</div><div class="rp-narr" style="min-height:20mm">'+esc(p.narrative)+"</div>" : "")
+    + "</section>";
+}
+
+/* ============================ 描画 ============================ */
+function renderAll(){ renderRoster(); renderEditor(); renderSheets(); }
+
+function renderSettings(){
+  const c = cfg();
+  const grid = document.getElementById("settingsGrid");
+  grid.innerHTML = c.fields.map(([key,label,ph])=>{
+    const type = ph === "date" ? "date" : "text";
+    const placeholder = ph === "date" ? "" : ph;
+    return '<div class="field"'+(key==="residents"?' style="grid-column:1/-1"':"")+'><label for="f_'+key+'">'+esc(label)+"</label>"
+      + '<input id="f_'+key+'" type="'+type+'" placeholder="'+esc(placeholder)+'"></div>';
+  }).join("");
+  document.getElementById("settingsHint").textContent = c.hint;
+  for (const [key] of c.fields){
+    const el = document.getElementById("f_"+key);
+    el.addEventListener("input", ()=>{
+      settings[mode] = settings[mode] || {};
+      settings[mode][key] = el.value;
+      save(); renderSheets();
+      if (key === "kinyuList" || key === "kinyu"){ renderEditor(); renderRoster(); }
+      if (key === "residents" || key === "logUser") ingestHouse();
+    });
+  }
+  fillSettings();
+}
+function fillSettings(){
+  const c = cfg();
+  const {y,m} = ymParts(ym);
+  settings[mode] = { ...c.defaults, ...(settings[mode]||{}) };
+  for (const [key,,ph] of c.fields){
+    const el = document.getElementById("f_"+key);
+    if (!el || document.activeElement === el) continue;
+    el.value = (key === "reportDate")
+      ? (settings[mode].reportDate || (ym ? ym+"-"+String(lastDay(y,m)).padStart(2,"0") : ""))
+      : (settings[mode][key] || "");
+  }
+}
+function applyMode(){
+  const c = cfg();
+  document.getElementById("h1").textContent = c.h1;
+  document.getElementById("h3").textContent = c.step3;
+  document.getElementById("dropBig").textContent = c.dropBig;
+  document.getElementById("dropHint").textContent = c.dropHint;
+  document.getElementById("fileInput").accept = c.accept;
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.mode === mode)));
+  const ga = document.getElementById("btnGenAll");
+  ga.textContent = mode === "house" ? "まとめをまとめて作る" : "様子文をまとめて作る";
+  renderSettings();
+}
+
+/* ============================ プレビューとPDF ============================ */
+let previewOn = false;
+function sheetCount(){ return document.querySelectorAll("#sheets .sheet").length; }
+function echoHowTo(){
+  const el = document.getElementById("pdfHowTo");
+  if (!el) return;
+  const each = document.getElementById("pdfMode").value === "each";
+  el.textContent = each
+    ? "「印刷（PDF保存）」を押すと1人1ファイルのPDFを続けて作ります。1件ずつ保存の確認が出ます。ファイル名は「" + docLabel() + "_中原様_" + ymTag() + ".pdf」の形です。"
+    : "「印刷（PDF保存）」を押すとA4のPDFが1つ出来ます。保存したPDFを開いて印刷してください。";
+}
+function echoScope(){
+  const sc = document.getElementById("printScope");
+  const el = document.getElementById("scopeEcho");
+  if (!sc || !el) return;
+  el.textContent = sc.options[sc.selectedIndex].text;
+}
+function updatePreviewCount(){
+  const el = document.getElementById("previewCount");
+  if (!el) return;
+  const n = sheetCount();
+  el.textContent = n ? n + "ページ（1人1ページ）" : "対象の方がいません";
+}
+function openPreview(){
+  renderSheets();
+  previewOn = true;
+  document.getElementById("sheets").classList.add("show");
+  document.getElementById("previewBar").classList.add("show");
+  updatePreviewCount();
+  const bar = document.getElementById("previewBar");
+  const th = document.querySelector(".topbar").offsetHeight;
+  bar.style.top = th + "px";
+  const top = bar.getBoundingClientRect().top + window.pageYOffset - th;
+  window.scrollTo({ top, behavior:"smooth" });
+}
+function closePreview(){
+  previewOn = false;
+  if (onlyKey){ onlyKey = null; renderSheets(); }
+  document.getElementById("sheets").classList.remove("show");
+  document.getElementById("previewBar").classList.remove("show");
+}
+function docLabel(){ return mode === "house" ? "ハウス記録" : cfg().label + "報告"; }
+function ymTag(){ const {y,m} = ymParts(ym); return String(y).slice(2) + "." + m; }
+function personTag(p){
+  const full = (p.name||"").replace(/[ 　]/g,"");
+  const sn = surname(p.name||"").replace(/[ 　]/g,"");
+  let dup = 0;
+  for (const k in people) if (surname(people[k].name||"").replace(/[ 　]/g,"") === sn) dup++;
+  return (dup > 1 ? full : sn) + "様";
+}
+function pdfName(){
+  if (onlyKey && people[onlyKey]) return docLabel() + "_" + personTag(people[onlyKey]) + "_" + ymTag() + ".pdf";
+  return docLabel() + "_" + ymTag() + ".pdf";
+}
+function targetKeys(){
+  const scope = document.getElementById("printScope").value;
+  return sortedKeys().filter(k=>{
+    const p = people[k];
+    if (onlyKey) return k === onlyKey;
+    if (p.exclude) return false;
+    if (scope === "done" && !p.confirmed) return false;
+    if (scope === "pick" && !p.pick) return false;
+    return true;
+  });
+}
+async function makePdfEach(btn){
+  const keys = targetKeys();
+  if (!keys.length){ notify("対象の方がいません。印刷範囲を確認してください。","warn"); return; }
+  notify(keys.length + "人分を1人ずつPDFにします。1件ずつ保存の確認が出ます。");
+  const state = document.getElementById("pdfState");
+  btn.disabled = true; const old = btn.textContent;
+  let done = 0;
+  try {
+    for (let i=0;i<keys.length;i++){
+      onlyKey = keys[i];
+      btn.textContent = "作成中… " + (i+1) + "/" + keys.length;
+      if (state) state.textContent = people[keys[i]].name + " を作成中…";
+      const ok = await buildAndSave(btn, true);
+      if (ok === "declined") break;
+      if (ok) done++;
+    }
+  } finally {
+    onlyKey = null; renderSheets();
+    btn.disabled = false; btn.textContent = old;
+    if (state) state.textContent = done ? done + "件保存しました" : "";
+  }
+}
+async function makePdf(btn){
+  const each = document.getElementById("pdfMode").value === "each";
+  if (each && !onlyKey) return makePdfEach(btn);
+  const state = document.getElementById("pdfState");
+  btn.disabled = true; const old = btn.textContent;
+  try { await buildAndSave(btn, false); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+async function buildAndSave(btn, quiet){
+  renderSheets();
+  const sheets = Array.from(document.querySelectorAll("#sheets .sheet"));
+  if (!sheets.length){ if (!quiet) notify("対象の方がいません。印刷範囲を確認してください。","warn"); return false; }
+  if (typeof html2canvas === "undefined" || !window.jspdf){ notify("PDFの部品を読み込めませんでした。通信環境を確認して、画面を開き直してください。","err"); return false; }
+  const wasOpen = previewOn;
+  if (!wasOpen) document.getElementById("sheets").classList.add("show");
+  const state = document.getElementById("pdfState");
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait", compress:true });
+    for (let i=0;i<sheets.length;i++){
+      if (!quiet){ btn.textContent = "作成中… " + (i+1) + "/" + sheets.length; if (state) state.textContent = "作成中… " + (i+1) + "/" + sheets.length; }
+      const canvas = await html2canvas(sheets[i], { scale:2, backgroundColor:"#ffffff", useCORS:true, logging:false });
+      const W = 196, H = 289, X = (210-W)/2, Y = 4;
+      const full = W * canvas.height / canvas.width;
+      if (full <= H + 2){
+        if (i > 0) doc.addPage();
+        doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", X, Y, W, full, undefined, "FAST");
+      } else {
+        const pxPerMm = canvas.width / W;
+        const sliceH = Math.floor(H * pxPerMm);
+        let first = true;
+        for (let off=0; off<canvas.height; off+=sliceH){
+          const hpx = Math.min(sliceH, canvas.height - off);
+          const c2 = document.createElement("canvas");
+          c2.width = canvas.width; c2.height = hpx;
+          const ctx = c2.getContext("2d");
+          ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,c2.width,c2.height);
+          ctx.drawImage(canvas, 0, off, canvas.width, hpx, 0, 0, canvas.width, hpx);
+          if (i > 0 || !first) doc.addPage();
+          first = false;
+          doc.addImage(c2.toDataURL("image/jpeg", 0.92), "JPEG", X, Y, W, hpx / pxPerMm, undefined, "FAST");
+        }
+      }
+    }
+    const blob = doc.output("blob");
+    const dl = await claudeUse("downloads");
+    if (!dl){
+      if (!saveBlob(blob, pdfName())){
+        notify("この画面ではダウンロードを使えません。プレビューを開いて「ブラウザの印刷を試す」からPDFに保存してください。","err");
+        return false;
+      }
+      if (state && !quiet) state.textContent = "保存しました";
+      return true;
+    }
+    await dl.save({ filename: pdfName(), data: blob });
+    if (state && !quiet) state.textContent = "保存しました";
+    return true;
+  } catch(e){
+    const code = e && e.code;
+    if (code === "declined"){ if (state) state.textContent = ""; return "declined"; }
+    if (code === "too_large") notify("PDFが大きすぎます。「1人ずつ別のPDF」に切り替えるか、人数を分けて出してください。","err");
+    else notify("PDFを作れませんでした。もう一度お試しください。","err");
+    return false;
+  } finally {
+    if (!wasOpen) document.getElementById("sheets").classList.remove("show");
+  }
+}
+function saveBlob(blob, filename){
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+    return true;
+  } catch(e){ return false; }
+}
+let _dlNs = undefined;
+async function claudeUse(name){
+  if (name === "downloads" && _dlNs !== undefined) return _dlNs;
+  if (!(window.claude && window.claude.use)) return null;
+  try { const ns = await window.claude.use(name); if (name === "downloads") _dlNs = ns; return ns; }
+  catch(e){ if (name === "downloads") _dlNs = null; return null; }
+}
+
+/* ============================ 初期化 ============================ */
+function initDrop(){
+  const dz = document.getElementById("drop"), fi = document.getElementById("fileInput");
+  dz.addEventListener("click", ()=>fi.click());
+  dz.addEventListener("keydown", e=>{ if (e.key==="Enter"||e.key===" "){ e.preventDefault(); fi.click(); }});
+  fi.addEventListener("change", ()=>{ if (fi.files.length) handleFiles(Array.from(fi.files)); fi.value=""; });
+  ["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev=>dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.remove("over"); }));
+  dz.addEventListener("drop", e=>{ const f = Array.from(e.dataTransfer.files||[]); if (f.length) handleFiles(f); });
+}
+
+(function init(){
+  try { const s = localStorage.getItem(LS.s); if (s) settings = JSON.parse(s) || {}; } catch(e){}
+  for (const k in MODES) settings[k] = { ...MODES[k].defaults, ...(settings[k]||{}) };
+  ym = nowYm();
+  try {
+    const last = JSON.parse(localStorage.getItem(LS.last) || "null");
+    if (last && MODES[last.mode]) mode = last.mode;
+    if (last && /^\d{4}-\d{2}$/.test(last.ym||"")) ym = last.ym;
+  } catch(e){}
+  const ymEl = document.getElementById("ym");
+  ymEl.value = ym;
+  ymEl.addEventListener("change", ()=>{ if (!ymEl.value) return; ym = ymEl.value; fillSettings(); loadMonth(); });
+
+  applyMode();
+  wireGenAll();
+  echoHowTo();
+  initDrop();
+  loadMonth();
+
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.addEventListener("click", ()=>{ if (mode === t.dataset.mode) return; mode = t.dataset.mode; applyMode(); loadMonth(); });
+  });
+  document.getElementById("printScope").addEventListener("change", ()=>{ onlyKey = null; echoScope(); renderSheets(); if (previewOn) openPreview(); });
+  echoScope(); echoHowTo();
+  document.getElementById("btnPreview").addEventListener("click", ()=>{ previewOn ? closePreview() : openPreview(); });
+  document.getElementById("btnClosePreview").addEventListener("click", closePreview);
+  document.getElementById("btnPrint2").addEventListener("click", ()=>{ try { window.print(); } catch(e){ notify("この画面からは印刷できません。「印刷（PDF保存）」からPDFにしてください。","warn"); } });
+  document.getElementById("pdfMode").addEventListener("change", echoHowTo);
+  document.getElementById("btnPdf").addEventListener("click", e=>makePdf(e.currentTarget));
+  document.getElementById("btnPdf2").addEventListener("click", e=>makePdf(e.currentTarget));
+  document.getElementById("btnPreview2").addEventListener("click", ()=>{ previewOn ? closePreview() : openPreview(); });
+  document.getElementById("btnCloseEd").addEventListener("click", ()=>{ selected=null; renderRoster(); renderEditor(); });
+  document.getElementById("btnClear").addEventListener("click", e=>{
+    arm(e.currentTarget, "この月の読み込み結果と入力を全部消します。取り消せません。", ()=>{
+      people = {}; selected = null; files = []; renderFiles();
+      document.getElementById("parseMsg").innerHTML = "";
+      save(); renderAll();
+      notify("この月の内容を消しました。");
+    });
+  });
+
+  if (window.claude && window.claude.use){
+    window.claude.use("db").then(x=>{
+      db = x;
+      if (!db) return;
+      showStore("");
+      db.doc("config/settings").onSnapshot(snap=>{
+        if (!snap.exists || snap.metadata.hasPendingWrites) return;
+        const d = snap.data() || {};
+        for (const k in MODES) settings[k] = { ...MODES[k].defaults, ...(d[k]||{}) };
+        fillSettings(); renderSheets();
+      }, ()=>{});
+      loadMonth();
+    });
+    window.claude.use("sample").then(x=>{
+      sample = x;
+      const ga = document.getElementById("btnGenAll");
+      wireGenAll();
+      if (selected) renderEditor();
+    });
+  } else {
+
+  }
+})();
+</script>
+
+</body>
+</html>
