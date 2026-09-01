@@ -1598,7 +1598,7 @@ function bindField(id, setter){
 const KW_SKIN = ["発赤","水疱","乾癬","巻き爪","剥離","発疹","掻爬","皮膚","湿疹","褥瘡"];
 const KW_PAIN = ["腰","膝","首","肩","手首","足","股関節","口内炎","巻き爪","つま先","母趾","背中","頭"];
 const KW_TRAIN = ["歩行","ストレッチ","座位","立位","平行棒","体操","口腔","マッサージ"];
-const KW_REC  = ["カラオケ","オセロ","マージャン","麻雀","七夕","塗り絵","折り紙","動画","ビデオ","パターゴルフ","スクラッチ","歌","俳句","小物作り","ボール","カレンダー","飾り"];
+const KW_REC  = ["カラオケ","オセロ","マージャン","七夕","塗り絵","折り紙","動画","ビデオ","パターゴルフ","スクラッチ","歌","俳句","小物作り","ボール","カレンダー","飾り"];
 function recsOfKind(p, re){
   return (p.records||[]).filter(r=>re.test(r.kind||"")).map(r=>(r.content||"")).filter(Boolean);
 }
@@ -1612,7 +1612,7 @@ function autoNarrative(p){
   const reiwa = y - 2018;
   const sei = surname(p.name||"");
   const n = (p.att||[]).length;
-  const all = (p.records||[]).map(r=>(r.content||""));
+  const all = (p.records||[]).map(r=>String(r.content||"").replace(/麻雀/g,"マージャン"));
   const out = [];
 
   if (mode === "house"){
@@ -1660,31 +1660,51 @@ function autoNarrative(p){
     return out.join("").replace(/。。/g,"。").slice(0,700);
   }
 
-  const label = mode === "visit" ? "訪問" : "通所";
-  out.push("令和"+reiwa+"年"+m+"月、"+sei+"様は"+n+"回ご利用いただきました。");
-
   if (mode === "visit"){
-    const svc = anyOf(all, ["掃除","清掃","洗濯","買物","買い物","調理","ゴミ出し","入浴","服薬","通院","見守り","乾燥"]);
-    if (svc.length) out.push("訪問では"+svc.slice(0,4).join("・")+"などを中心に支援を行っています。");
-    const notes = (p.records||[]).map(r=>{
-      const mm = (r.content||"").split("／");
-      return mm.length > 2 ? mm[2].trim() : "";
-    }).filter(Boolean);
-    if (notes.length){
-      const sen = sentences(notes[0])[0] || notes[0];
-      out.push(clip(sen, 60).replace(/[、,]$/,"")+"。");
-    }
-    out.push("お体の状態に大きな変化はなく、落ち着いてお過ごしです。");
-    return out.join("").slice(0,340).replace(/。。/g,"。");
+    out.push("令和"+reiwa+"年"+m+"月、"+sei+"様のお宅へ"+n+"回訪問させていただきました。");
+    const parsed = (p.records||[]).map(r=>{
+      const mm = String(r.content||"").split("／").map(s=>tidyJa(s));
+      return { day:r.day, svc:mm[0]||"", items:mm[1]||"", note:mm.slice(2).join(" ").trim() };
+    });
+    const itemsRaw = parsed.map(r=>r.items).join("/");
+    const items = norm(itemsRaw);
+    const VCAT = [["清掃(居室)","居室の掃除"],["清掃(トイレ)","トイレの掃除"],["清掃(浴室)","浴室の掃除"],["清掃(台所)","台所の掃除"],
+                  ["日常品等買物","日用品の買い物"],["買物","買い物"],["調理","調理"],["配下膳","配下膳"],["ゴミ出し","ゴミ出し"],
+                  ["洗濯","洗濯"],["乾燥","物干し"],["シーツ","シーツ交換"],["整理","整理整頓"],
+                  ["服薬","服薬の介助・確認"],["入浴","入浴の介助"],["清拭","清拭"],["排泄","排泄の介助"],["更衣","更衣の介助"],
+                  ["通院","通院の介助"],["移動","移動の介助"],["見守り","見守り"]];
+    const hits = [];
+    let rest = items;
+    VCAT.forEach(function(c){
+      const k = norm(c[0]);
+      if (rest.indexOf(k) < 0) return;
+      rest = rest.split(k).join("");
+      if (hits.indexOf(c[1]) < 0) hits.push(c[1]);
+    });
+    if (hits.length) out.push("訪問時は"+hits.slice(0,6).join("・")+"を中心に支援を行っています。");
+    if (items.indexOf("共に行う") >= 0) out.push("できることはご本人と一緒に行い、生活動作の維持につながるよう支援しています。");
+    if (/顔色|発汗/.test(items)) out.push("訪問のたびに顔色や発汗の有無を確認し、体調にお変わりがないかを見ています。");
+
+    const notes = parsed.filter(r=>r.note && r.note.length > 8);
+    const pick = notes.slice().sort((a,b)=>b.note.length - a.note.length).slice(0,3).sort((a,b)=>a.day - b.day);
+    pick.forEach(function(r){
+      const t = takeSentences(r.note, 62);
+      if (t) out.push(r.day+"日は"+t+"。");
+    });
+    if (/受診|通院|退院|入院|往診/.test(itemsRaw + notes.map(r=>r.note).join(""))) out.push("受診や通院のご予定も確認しながら対応しています。");
+    out.push("お体の状態に大きな変化はなく、落ち着いてお過ごしです。今後もご本人のご希望を伺いながら支援を続けてまいります。");
+    return trimTail(out.join("").replace(/。。/g,"。"), 480);
   }
+
+  out.push("令和"+reiwa+"年"+m+"月、"+sei+"様は"+n+"回ご利用いただきました。");
 
   const bath = recsOfKind(p, /入浴/);
   if (bath.length){
-    let how = "入浴は一般浴で";
-    if (bath.some(t=>t.indexOf("手前") >= 0)) how = "ご本人に合った浴槽を選んで";
+    let how = "一般浴で";
+    if (bath.some(t=>t.indexOf("手前") >= 0)) how = "ご本人に合った浴槽を選び";
     else if (bath.some(t=>/バスボード|シャワーチェア/.test(t))) how = "バスボード等を用いて";
     else if (bath.some(t=>t.indexOf("短浴") >= 0)) how = "体調に合わせて";
-    out.push(how+"安全に実施しています。");
+    out.push("入浴は"+how+"安全に実施しています。");
   }
   const care = recsOfKind(p, /処置/);
   if (care.length){
@@ -1703,11 +1723,36 @@ function autoNarrative(p){
   const meal = recsOfKind(p, /食事/);
   if (meal.length) out.push(meal.filter(t=>t.indexOf("完食") >= 0).length >= 2
     ? "食事は概ね良好に召し上がっています。" : "食事は体調に合わせて召し上がっています。");
+  const vit = recsOfKind(p, /バイタル/);
+  if (vit.length) out.push("毎回、体温・血圧・脈拍などのバイタルを測定し、体調を確認しています。");
+  const med2 = all.filter(t=>/服薬|内服|お薬/.test(t));
+  if (med2.length){
+    out.push(/ゼリー|アイス|ご飯の上|とろみ|飲み込み|嚥下|飲み残/.test(med2.join(""))
+      ? "服薬は飲み込みの状態に合わせてゼリー等を利用しながら確認しています。"
+      : "服薬の確認を行い、必要に応じて声かけをしています。");
+  }
+  const exc = recsOfKind(p, /排泄/);
+  if (exc.length && /硬め|便秘|失禁|下痢/.test(exc.join(""))) out.push("排泄の状況にも変化がないか確認しています。");
   const rec = recsOfKind(p, /レク|ケース/);
   const acts = anyOf(rec, KW_REC);
-  out.push(acts.length ? "レクリエーションでは"+acts.slice(0,4).join("・")+"などを楽しまれ、穏やかに過ごされています。"
+  out.push(acts.length ? "レクリエーションでは"+acts.slice(0,4).join("・")+"などを楽しまれ、他のご利用者様とも和やかに過ごされています。"
                        : "穏やかに過ごされています。");
-  return out.join("").slice(0,340);
+  const notes3 = (p.records||[])
+    .filter(r=>/特記|ケース|モニタリング/.test(r.kind||"") || /【特記】/.test(r.content||""))
+    .map(r=>({ day:r.day, t: stripFields(String(r.content||"")) }))
+    .filter(x=>x.t.length > 12);
+  const pick3 = notes3.slice().sort((a,b)=>b.t.length - a.t.length).slice(0,2).sort((a,b)=>a.day - b.day);
+  const extra = [];
+  pick3.forEach(function(r){
+    const t = takeSentences(r.t, 56);
+    if (t) extra.push(r.day+"日には"+t+"。");
+  });
+  const tail = [];
+  if (all.some(t=>/ご家族|お兄|お姉|息子|娘|面会|来訪/.test(t))) tail.push("ご家族との連絡事項についても、その都度共有させていただいています。");
+  tail.push("今後も安全に配慮しながら、ご本人のペースに合わせて支援してまいります。");
+  while (extra.length && (out.join("")+extra.join("")+tail.join("")).length > 470) extra.pop();
+  const body = out.concat(extra, tail).join("").replace(/。。/g,"。");
+  return trimTail(body, 480);
 }
 
 /* ============================ Claude ============================ */
@@ -1824,7 +1869,7 @@ function dayBuckets(p, y, m){
 }
 function tidyJa(x){
   let t = String(x||"").replace(/\s+/g," ");
-  const re = /([\u3040-\u30ff\u4e00-\u9fff々、。・）」])\s+([\u3040-\u30ff\u4e00-\u9fff々（「])/g;
+  const re = /([\u3040-\u30ff\u4e00-\u9fff々、。・）」])\s+([\u3040-\u30ff\u4e00-\u9fff々、。・）」（「])/g;
   for (let i=0;i<3;i++) t = t.replace(re, "$1$2");
   return t.trim();
 }
@@ -1861,6 +1906,56 @@ function joinFrag(cur, add, cap){
   let s = parts.join("／");
   if (s.length > cap) s = s.slice(0, cap);
   return s;
+}
+const POLITE_DONE = /(ます|ました|ません|でした|です|ください|いただきました|おります|でしょう)$/;
+const POLITE = [
+  [/と言っていた$/,"とお話しされていました"],[/と話していた$/,"とお話しされていました"],
+  [/と言う$/,"とのことでした"],[/と言った$/,"とお話しされていました"],
+  [/見られる$/,"見られました"],[/見られた$/,"見られました"],
+  [/行った$/,"行いました"],[/行う$/,"行いました"],[/行く$/,"行きました"],
+  [/ている$/,"ていました"],[/ていた$/,"ていました"],
+  [/られる$/,"られました"],[/られた$/,"られました"],
+  [/あった$/,"ありました"],[/ある$/,"ありました"],
+  [/いた$/,"いました"],[/いる$/,"いました"],
+  [/だった$/,"でした"],[/した$/,"しました"],[/する$/,"しました"],
+  [/なった$/,"なりました"],[/なる$/,"なりました"],
+  [/来た$/,"来られました"],[/来る$/,"来られました"],
+  [/使う$/,"使いました"],[/出す$/,"出しました"],[/言う$/,"とのことでした"]
+];
+function stripFields(t){
+  let s = tidyJa(t).replace(/【[^】]{0,14}】/g,"");
+  for (let i=0;i<8;i++){
+    const m = s.match(/^[^、。：:]{1,10}[：:][^、。]{0,8}、/);
+    if (!m) break;
+    s = s.slice(m[0].length);
+  }
+  s = s.replace(/^[^、。：:]{1,10}[：:]/,"");
+  s = s.replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g,"");
+  s = s.replace(/^(モニタリング|ケース記録|ケース|特記事項|特記)/,"");
+  s = s.replace(/^[○×〇・、,\s]+/,"");
+  return s.trim();
+}
+function trimTail(t, cap){
+  if (t.length <= cap) return t;
+  const s = t.slice(0, cap), i = s.lastIndexOf("。");
+  return i > cap*0.4 ? s.slice(0, i+1) : s;
+}
+function politeSentence(s){
+  const t = String(s||"").trim();
+  if (!t || POLITE_DONE.test(t)) return t;
+  for (let i=0;i<POLITE.length;i++) if (POLITE[i][0].test(t)) return t.replace(POLITE[i][0], POLITE[i][1]);
+  return t;
+}
+function takeSentences(t, cap){
+  const ss = sentences(t).map(politeSentence).filter(Boolean);
+  let s = "";
+  for (let i=0;i<ss.length;i++){
+    const nx = s ? s+"。"+ss[i] : ss[i];
+    if (nx.length > cap) break;
+    s = nx;
+  }
+  if (!s) s = clip(ss[0] || t, cap);
+  return s.replace(/[、,。]$/,"");
 }
 function mutableDays(p){
   if (!p.days || typeof p.days !== "object" || Object.isFrozen(p.days) || !Object.isExtensible(p.days)){
@@ -1986,9 +2081,9 @@ async function scanHouse(p){
     const prompt = "以下はサービス付き高齢者向け住宅アロハハウスの"+y+"年"+m+"月の記録です。介護記録（本人分とハウス日誌）と職員LINEが含まれます。入居者「"+p.name+"」様について、日ごとに次の4点を抜き出してください。\n"
       + "morning: モーニングコールを実施した記述があれば「○」、実施しなかった／不要と明記されていれば「×」、記述がなければ空文字\n"
       + "oncall: オンコール対応の記述があれば「○」、呼び出し0件と明記されていれば「×」、記述がなければ空文字\n"
-      + "med: 服薬に関する記述（服薬済み、声かけ、飲み忘れ等）を20字以内で。無ければ空文字\n"
+      + "med: 服薬に関する記述（服薬済み・声かけ・飲み残し・一包化の空袋確認・ゼリーやアイスの利用・外用薬の塗布・処方の追加や変更など）を60字以内で。複数あれば「／」でつないで全て書く。無ければ空文字\n"
       + "meal: 食事量や摂取状況の記述（完食、半分、朝食のみ等）を20字以内で。無ければ空文字\n"
-      + "note: その他この入居者について特記すべきこと（体調、通院、痛み等）を40字以内で。無ければ空文字\n\n"
+      + "note: その他この入居者ご本人に関することを100字以内で。ご家族の来訪や連絡、受診・往診・通院の予定、ご本人のご希望や要望、体調や痛み、皮膚の状態などを、記録にある分だけ「／」でつないで書く。無ければ空文字\n\n"
       + "厳守：記録に書かれていることだけを使い、推測や創作はしないこと。記述が無い日は行ごと省いてよい。dayはその月の日にち（1〜"+lastDay(y,m)+"）の整数。\n\n"
       + '返答はJSONだけにしてください。形式は {"days":[{"day":1,"morning":"○","oncall":"","med":"朝食後服薬済み","meal":"完食","note":""}]} です。\n\n'
       + "--- 記録 ---\n" + src;
