@@ -927,14 +927,42 @@ function residentList(){
   return (set("residents")||"").split(/[,、\n]/).map(s=>s.trim()).filter(Boolean);
 }
 function surname(name){ return name.split(/[ 　]/)[0]; }
+/* この人以外の入居者・利用者の苗字（他人の内容の混入を防ぐ） */
+function otherSurnames(p){
+  const sn = surname(p && p.name || "");
+  const seen = {}, out = [];
+  const add = (nm)=>{
+    const n = surname(String(nm||"").trim());
+    if (!n || n === sn || n.length < 2 || seen[n]) return;
+    seen[n] = 1; out.push(n);
+  };
+  for (const k in people){ if (!people[k].exclude) add(people[k].name); }
+  for (const k in houseRecs){ add(houseRecs[k].name); }
+  residentList().forEach(add);
+  const lg = surname(set("logUser")||"");
+  return out.filter(n=>n !== lg);
+}
+function hasOther(t, others){
+  const s = String(t||"");
+  for (let i=0;i<others.length;i++) if (s.indexOf(others[i]) >= 0) return true;
+  return false;
+}
+function scrubOthers(t, others){
+  let s = String(t||"");
+  others.forEach(function(n){
+    s = s.split(n+"様").join("").split(n+"さん").join("").split(n+"さま").join("").split(n).join("");
+  });
+  return s.replace(/、\s*、/g,"、").replace(/^[、,・\/\s]+/,"").trim();
+}
 const RE_HOUSE_KW = /モーニングコール|オンコール|服薬|お薬|内服|薬|軟膏|塗布|外用|貼付|処方|受診|往診|訪問診療|訪問看護|歯科|通院|ご家族|家族|面会|来訪|朝食|昼食|夕食|朝ご飯|昼ご飯|夕ご飯|完食|食事/;
 function messagesFor(name, y, m){
   const sn = surname(name);
+  const others = otherSurnames({ name: name });
   const keep = [];
   for (const g of lineMsgs){
     if (g.y !== y || g.m !== m) continue;
     const t = g.text;
-    if (t.indexOf(sn) >= 0 || RE_HOUSE_KW.test(t)){
+    if (t.indexOf(sn) >= 0 || (RE_HOUSE_KW.test(t) && !hasOther(t, others))){
       keep.push(String(g.m).padStart(2,"0")+"/"+String(g.d).padStart(2,"0")+" "+g.time+" "+t.replace(/\n/g," "));
     }
   }
@@ -950,12 +978,13 @@ function inMonth(r, y, m){
 }
 function houseSource(name, y, m){
   const sn = surname(name), key = norm(name);
+  const others = otherSurnames({ name: name });
   const out = [];
   const lg = houseRecs[norm(set("logUser"))];
   if (lg && norm(set("logUser")) !== key){
     const rows = lg.records
       .filter(r=>inMonth(r,y,m) && (r.content||"").trim())
-      .filter(r=>RE_HOUSE_KW.test(r.content) || r.content.indexOf(sn) >= 0)
+      .filter(r=>r.content.indexOf(sn) >= 0 || (RE_HOUSE_KW.test(r.content) && !hasOther(r.content, others)))
       .map(r=>recLine(r,m));
     if (rows.length) out.push("【ハウス日誌（"+set("logUser")+"の記録：オンコール・モーニングコール）】\n"+rows.join("\n").slice(0,3000));
   }
@@ -1001,7 +1030,7 @@ function staffFrom(records){
   return Object.keys(c).sort((a,b)=>c[b]-c[a] || a.localeCompare(b,"ja")).slice(0,12).map(n=>({ name:n, n:c[n] }));
 }
 function staffOf(p){
-  if (p.records && p.records.length) return staffFrom(p.records);
+  if (recordsOf(p).length) return staffFrom(recordsOf(p));
   if (p.staff && p.staff.length) return p.staff;
   return [];
 }
@@ -1034,6 +1063,19 @@ function bindKinyu(p){
       save(); renderEditor(); renderRoster(); renderSheets();
     });
   });
+}
+function recordsOf(p){
+  if (p && p.records && p.records.length) return p.records;
+  const out = [];
+  const src = (p && p.digest) || "";
+  src.split("\n").forEach(function(l){
+    const m = l.match(/^\[([^\]]*)\]\s*(\S*)\s*(\d{1,2}[:：]\d{2}(?:\s*[〜~-]\s*\d{1,2}[:：]\d{2})?)?\s*([\s\S]*)$/);
+    if (!m) return;
+    const date = m[1] || "";
+    const dm = date.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+    out.push({ date: date, day: dm ? +dm[2] : 0, kind: m[2] || "", time: m[3] || "", content: (m[4] || "").trim() });
+  });
+  return out;
 }
 function digestOf(records){
   return (records||[])
@@ -1439,7 +1481,7 @@ function careEditor(p){
     cal += "</tr>";
   }
   cal += "</tbody></table>";
-  const recs = (p.records||[]).slice(0,400);
+  const recs = recordsOf(p).slice(0,400);
   const log = recs.length
     ? '<details class="diag"><summary>取り込んだ記録を見る（'+recs.length+"行）</summary><div class=reclog><table>"
       + recs.map(r=>"<tr><td>"+esc(r.date)+"</td><td>"+esc(r.kind)+"</td><td>"+esc((r.content||"").slice(0,140))+"</td></tr>").join("")
@@ -1574,7 +1616,7 @@ function bindCommonEditor(p){
   const gen = document.getElementById("btnGen");
   gen.addEventListener("click", ()=>{
     if (!sample){
-      if (!(p.records||[]).length && mode !== "house"){
+      if (!recordsOf(p).length && mode !== "house"){
         notify("先に記録を読み込んでください。","warn"); return;
       }
       const t = autoNarrative(p);
@@ -1600,7 +1642,7 @@ const KW_PAIN = ["腰","膝","首","肩","手首","足","股関節","口内炎",
 const KW_TRAIN = ["歩行","ストレッチ","座位","立位","平行棒","体操","口腔","マッサージ"];
 const KW_REC  = ["カラオケ","オセロ","マージャン","七夕","塗り絵","折り紙","動画","ビデオ","パターゴルフ","スクラッチ","歌","俳句","小物作り","ボール","カレンダー","飾り"];
 function recsOfKind(p, re){
-  return (p.records||[]).filter(r=>re.test(r.kind||"")).map(r=>(r.content||"")).filter(Boolean);
+  return recordsOf(p).filter(r=>re.test(r.kind||"")).map(r=>(r.content||"")).filter(Boolean);
 }
 function anyOf(texts, words){
   const hit = [];
@@ -1612,7 +1654,7 @@ function autoNarrative(p){
   const reiwa = y - 2018;
   const sei = surname(p.name||"");
   const n = (p.att||[]).length;
-  const all = (p.records||[]).map(r=>String(r.content||"").replace(/麻雀/g,"マージャン"));
+  const all = recordsOf(p).map(r=>String(r.content||"").replace(/麻雀/g,"マージャン"));
   const out = [];
 
   if (mode === "house"){
@@ -1662,7 +1704,7 @@ function autoNarrative(p){
 
   if (mode === "visit"){
     out.push("令和"+reiwa+"年"+m+"月、"+sei+"様のお宅へ"+n+"回訪問させていただきました。");
-    const parsed = (p.records||[]).map(r=>{
+    const parsed = recordsOf(p).map(r=>{
       const mm = String(r.content||"").split("／").map(s=>tidyJa(s));
       return { day:r.day, svc:mm[0]||"", items:mm[1]||"", note:mm.slice(2).join(" ").trim() };
     });
@@ -1737,7 +1779,7 @@ function autoNarrative(p){
   const acts = anyOf(rec, KW_REC);
   out.push(acts.length ? "レクリエーションでは"+acts.slice(0,4).join("・")+"などを楽しまれ、他のご利用者様とも和やかに過ごされています。"
                        : "穏やかに過ごされています。");
-  const notes3 = (p.records||[])
+  const notes3 = recordsOf(p)
     .filter(r=>/特記|ケース|モニタリング/.test(r.kind||"") || /【特記】/.test(r.content||""))
     .map(r=>({ day:r.day, t: stripFields(String(r.content||"")) }))
     .filter(x=>x.t.length > 12);
@@ -1984,6 +2026,7 @@ function bucketsFromDigest(p){
 function scanRules(p){
   const {y,m} = ymParts(ym);
   const sn = surname(p.name);
+  const others = otherSurnames(p);
   let byDay = dayBuckets(p, y, m);
   if (!Object.keys(byDay).length) byDay = bucketsFromDigest(p);
   const last = lastDay(y,m);
@@ -1996,7 +2039,18 @@ function scanRules(p){
     const out = { morning:cur.morning||"", morningNote:cur.morningNote||"", oncall:cur.oncall||"", oncallNote:cur.oncallNote||"",
                   med:cur.med||"", mealA:cur.mealA||"", mealB:cur.mealB||"", mealC:cur.mealC||"", note:cur.note||"" };
     for (const it of byDay[d]){
-      const t = it.t;
+      let t = it.t;
+      if (it.g){
+        // 全体連絡・LINE：本人に関する文だけに絞り、他の入居者名は取り除く
+        const ss = sentences(t);
+        const keep = ss.filter(x=>x.indexOf(sn) >= 0 || !hasOther(x, others));
+        if (!keep.length) continue;
+        const mine = t.indexOf(sn) >= 0;
+        const global = /モーニングコール|オンコール|全員|名とも/.test(t);
+        if (!mine && hasOther(t, others) && !global) continue;
+        t = scrubOthers(keep.join("。"), others);
+        if (!t) continue;
+      }
       // オンコール
       if (!out.oncall){
         const oc = t.match(/オンコール[^0-9０-９]{0,14}([0-9０-９]+)\s*件/);
@@ -2010,7 +2064,7 @@ function scanRules(p){
       if (/モーニングコール/.test(t)){
         if (!out.morning && (t.indexOf(sn) >= 0 || /名とも|全員|異常なし|終わりました|終了/.test(t))) out.morning = "○";
         if (!out.morningNote){
-          const sens = sentences(t).filter(x=>/モーニングコール/.test(x) || x.indexOf(sn) >= 0);
+          const sens = sentences(t).filter(x=>/モーニングコール/.test(x) || (!it.g && x.indexOf(sn) >= 0));
           const own = sens.find(x=>x.indexOf(sn) >= 0) || sens[0];
           if (own) out.morningNote = clip(own.replace(/^.*?モーニングコール(の様子|時)?[：:、]?/,""), 34) || clip(own, 34);
         }
@@ -2039,6 +2093,9 @@ function scanRules(p){
           if (out.note.length >= 64) break;
         }
       }
+    }
+    for (const f in out){
+      if (typeof out[f] === "string" && out[f] && hasOther(out[f], others)) out[f] = scrubOthers(out[f], others);
     }
     let changed = false;
     for (const f in out) if (out[f] !== (cur[f]||"")) changed = true;
@@ -2079,6 +2136,7 @@ async function scanHouse(p){
   const timer = setTimeout(()=>{ try { scanAbort && scanAbort.abort(); } catch(e){} }, 100000);
   try {
     const prompt = "以下はサービス付き高齢者向け住宅アロハハウスの"+y+"年"+m+"月の記録です。介護記録（本人分とハウス日誌）と職員LINEが含まれます。入居者「"+p.name+"」様について、日ごとに次の4点を抜き出してください。\n"
+      + "【重要】記録には他の入居者の内容も混ざっています。「"+surname(p.name)+"」様ご本人に関する記述だけを使い、他の入居者の内容や他の入居者の氏名は一切書かないでください。どちらの入居者の話か判断できない記述は使わないでください。\n"
       + "morning: モーニングコールを実施した記述があれば「○」、実施しなかった／不要と明記されていれば「×」、記述がなければ空文字\n"
       + "oncall: オンコール対応の記述があれば「○」、呼び出し0件と明記されていれば「×」、記述がなければ空文字\n"
       + "med: 服薬に関する記述（服薬済み・声かけ・飲み残し・一包化の空袋確認・ゼリーやアイスの利用・外用薬の塗布・処方の追加や変更など）を60字以内で。複数あれば「／」でつないで全て書く。無ければ空文字\n"
@@ -2503,5 +2561,4 @@ function initDrop(){
 })();
 </script>
 
-</body>
-</html>
+</body></html>
