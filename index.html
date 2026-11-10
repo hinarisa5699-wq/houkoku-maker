@@ -1641,8 +1641,18 @@ const KW_SKIN = ["発赤","水疱","乾癬","巻き爪","剥離","発疹","掻�
 const KW_PAIN = ["腰","膝","首","肩","手首","足","股関節","口内炎","巻き爪","つま先","母趾","背中","頭"];
 const KW_TRAIN = ["歩行","ストレッチ","座位","立位","平行棒","体操","口腔","マッサージ"];
 const KW_REC  = ["カラオケ","オセロ","マージャン","七夕","塗り絵","折り紙","動画","ビデオ","パターゴルフ","スクラッチ","歌","俳句","小物作り","ボール","カレンダー","飾り"];
-function recsOfKind(p, re){
-  return recordsOf(p).filter(r=>re.test(r.kind||"")).map(r=>(r.content||"")).filter(Boolean);
+/* 「入浴：×」「実施：×」のように×が付いた記録は“やっていない”ので除外する */
+function notDone(t, field){
+  if (!field) return false;
+  const s = nfkc(String(t||""));
+  const re = new RegExp("(^|[\\s、。／/])" + field + "\\s*[：:]\\s*[×✕✖╳Xx]");
+  return re.test(s);
+}
+function recsOfKind(p, re, doneField){
+  return recordsOf(p)
+    .filter(r=>re.test(r.kind||""))
+    .map(r=>(r.content||""))
+    .filter(t=>t && !notDone(t, doneField));
 }
 function anyOf(texts, words){
   const hit = [];
@@ -1740,15 +1750,20 @@ function autoNarrative(p){
 
   out.push("令和"+reiwa+"年"+m+"月、"+sei+"様は"+n+"回ご利用いただきました。");
 
-  const bath = recsOfKind(p, /入浴/);
+  const bathAll = recsOfKind(p, /入浴/);
+  const bath = recsOfKind(p, /入浴/, "入浴");
+  const bathSkip = bathAll.length - bath.length;
   if (bath.length){
     let how = "一般浴で";
     if (bath.some(t=>t.indexOf("手前") >= 0)) how = "ご本人に合った浴槽を選び";
     else if (bath.some(t=>/バスボード|シャワーチェア/.test(t))) how = "バスボード等を用いて";
     else if (bath.some(t=>t.indexOf("短浴") >= 0)) how = "体調に合わせて";
     out.push("入浴は"+how+"安全に実施しています。");
+    if (bathSkip) out.push("体調やご本人のご希望により、入浴を見合わせた日が"+bathSkip+"日ありました。");
+  } else if (bathAll.length){
+    out.push("入浴は体調やご本人のご希望により見合わせています。");
   }
-  const care = recsOfKind(p, /処置/);
+  const care = recsOfKind(p, /処置/, "処置");
   if (care.length){
     const k = anyOf(care, KW_SKIN);
     out.push(k.length ? k.slice(0,3).join("・")+"に対し塗布や保護などの処置を継続し、看護師が対応しています。"
@@ -1756,7 +1771,7 @@ function autoNarrative(p){
   }
   const pains = anyOf(all.filter(t=>t.indexOf("痛") >= 0), KW_PAIN);
   if (pains.length) out.push(pains.slice(0,3).join("・")+"の痛みの訴えがあり、状態を確認しています。");
-  const tr = recsOfKind(p, /機能訓練|リハビリ/);
+  const tr = recsOfKind(p, /機能訓練|リハビリ/, "実施");
   if (tr.length){
     const k = anyOf(tr, KW_TRAIN);
     out.push("機能訓練では"+(k.length ? k.slice(0,3).join("・") : "体操やストレッチ")+"を中心に実施し、"
@@ -1775,7 +1790,7 @@ function autoNarrative(p){
   }
   const exc = recsOfKind(p, /排泄/);
   if (exc.length && /硬め|便秘|失禁|下痢/.test(exc.join(""))) out.push("排泄の状況にも変化がないか確認しています。");
-  const rec = recsOfKind(p, /レク|ケース/);
+  const rec = recsOfKind(p, /レク|ケース/, "参加");
   const acts = anyOf(rec, KW_REC);
   out.push(acts.length ? "レクリエーションでは"+acts.slice(0,4).join("・")+"などを楽しまれ、他のご利用者様とも和やかに過ごされています。"
                        : "穏やかに過ごされています。");
